@@ -50,7 +50,7 @@ function Samurai({ motion, agentIndex }: { motion: RefObject<MotionValues>; agen
     if (sword.current) sword.current.rotation.z = MathUtils.damp(sword.current.rotation.z, -0.47 + scroll * 0.32, 2.4, damping);
   });
 
-  return <group ref={rig} position={[1.55, -0.48, 0]} scale={1.12}>
+  return <group ref={rig} position={[1.7, -0.27, 0]} scale={0.85}>
     {/* A low-poly original figure: helmet, layered armor, hakama and one illuminated blade. */}
     <mesh position={[0, 2.15, 0]} castShadow><sphereGeometry args={[0.33, 8, 6]} /><meshStandardMaterial color="#19191a" metalness={0.48} roughness={0.5} /></mesh>
     <mesh position={[0, 2.28, 0]} rotation={[0, 0, 0]} castShadow><sphereGeometry args={[0.5, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2]} /><meshStandardMaterial color="#252021" metalness={0.55} roughness={0.42} /></mesh>

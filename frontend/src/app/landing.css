@@ -4,9 +4,9 @@
 .cinematic-stage::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg,transparent 0 89px,#d2a85e08 90px 91px),radial-gradient(ellipse at center,transparent 24%,#06090b9e); }
 .cinematic-stage::after { content: ""; position: absolute; left: 53%; top: 0; width: 43%; height: 100%; border-right: 10px solid #2c2119; border-left: 10px solid #2c2119; border-top: 10px solid #59402a; box-shadow: inset 0 0 100px #06070999, 0 0 0 2px #ae824424; opacity: .36; }
 .scene-poster { position: absolute; inset: 0; transition: opacity .7s ease; }
-.scene-poster--dim { opacity: .18; }
+.scene-poster--dim .samurai-poster { opacity: 0; }
 .scene-sun { position: absolute; width: min(39vw,520px); aspect-ratio: 1; left: 70%; top: 52%; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(circle at 38% 35%,#a7472f,#721e1b 65%,#361416 85%); box-shadow: 0 0 100px #a70d164d; }
-.samurai-poster { position: absolute; width: min(35vw,465px); height: min(80svh,700px); object-fit: contain; left: 69%; bottom: 0; transform: translateX(-50%); filter: drop-shadow(0 25px 24px #000c) drop-shadow(0 0 28px #a70d1655); }
+.samurai-poster { position: absolute; width: min(35vw,465px); height: min(80svh,700px); object-fit: contain; left: 69%; bottom: 0; transform: translateX(-50%); filter: drop-shadow(0 25px 24px #000c) drop-shadow(0 0 28px #a70d1655); transition: opacity .4s ease; }
 .scene-canvas { position: absolute; z-index: 1; inset: 0; }
 .scene-canvas canvas { pointer-events: none; }
 .scene-vignette { position: absolute; z-index: 2; inset: 0; background: linear-gradient(90deg,#06090b55,transparent 43%),linear-gradient(0deg,#070b0de8,transparent 22%,transparent 78%,#070b0d5e); }
@@ -43,8 +43,8 @@
 @media (max-width: 768px), (prefers-reduced-motion: reduce) {
   .cinematic-stage { position: absolute; top: 0; left: 0; right: 0; height: max(680px,100svh); min-height: 0; margin: 0; }
   .cinematic-stage::after { left: 15%; width: 70%; }
-  .scene-sun { width: min(80vw,390px); left: 58%; top: 47%; opacity: .8; }
-  .samurai-poster { width: min(75vw,380px); height: 67%; left: 60%; bottom: 1%; opacity: .58; }
+  .scene-sun { width: min(80vw,390px); left: 58%; top: 47%; opacity: .45; }
+  .samurai-poster { width: min(75vw,380px); height: 67%; left: 60%; bottom: 1%; opacity: .24; }
   .landing-hero--cinematic { min-height: max(680px,100svh); justify-content: center; text-align: center; }
   .landing-hero--cinematic .landing-hero-content { width: min(560px,calc(100% - 40px)); margin: 0 auto; padding: 120px 0 110px; text-align: center; }
   .landing-hero--cinematic .hero-emblem { margin: 14px auto 20px; }

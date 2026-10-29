@@ -96,7 +96,10 @@ export function LandingExperience() {
       const scope = gsap.context(() => {
         gsap.to(heroCopyRef.current, {
           yPercent: -12, opacity: 0.25, ease: "none",
-          scrollTrigger: { trigger: heroRef.current, start: "top top", end: "bottom top", scrub: 0.7 },
+          scrollTrigger: {
+            trigger: heroRef.current, start: "top top", end: "bottom top", scrub: 0.7,
+            onUpdate: (self) => { motion.current.scroll = self.progress * 0.65; },
+          },
         });
         ScrollTrigger.create({
           trigger: agentsRef.current,
