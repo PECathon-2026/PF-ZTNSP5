@@ -18,6 +18,7 @@ from app.security.paths import PathSecurityError, canonicalize_and_validate_path
 from app.services.workspace_service import WorkspaceService, WriterLeaseError, get_workspace_service
 from app.tools.editor import PatchError
 from app.tools.gateway import ToolGateway, ToolGatewayError
+from app.services.activity import tool_activity
 
 
 SYSTEM_PROMPT = """You are Samurai, DevPilot's source-code developer.
@@ -73,10 +74,14 @@ class SamuraiRunner:
         self, adapter: ModelAdapter, *, config: SamuraiConfig | None = None,
         workspace_service: WorkspaceService | None = None,
         before_tool=None,
+        on_activity=None,
+        task_title: str | None = None,
     ):
         self.adapter = adapter
         self.config = config or SamuraiConfig()
         self.before_tool = before_tool
+        self.on_activity = on_activity
+        self.task_title = task_title
         self.workspaces = workspace_service or get_workspace_service()
         self.gateway = ToolGateway()
         self.gateway.workspace_service = self.workspaces
@@ -211,6 +216,9 @@ class SamuraiRunner:
                                 turn=turn, tool_use_id=call.tool_use_id, tool=call.name,
                                 status="SUCCEEDED", fingerprint=candidate.content_fingerprint,
                             ))
+                            if self.on_activity:
+                                await self.on_activity(tool_activity("SAMURAI", "submit_candidate", "outcome",
+                                                                     candidate_fingerprint=candidate.content_fingerprint), candidate.id)
                             return
 
                         rel = args.get("relative_path")
@@ -229,10 +237,17 @@ class SamuraiRunner:
                                     raise ToolGatewayError("Read this file before editing it.")
                                 if "content" in args:
                                     raise ToolGatewayError("Use a targeted patch for existing files.")
-                                if path.read_text(encoding="utf-8").count(args["target"]) != 1:
+                                if not args.get("delete") and path.read_text(encoding="utf-8").count(args["target"]) != 1:
                                     raise ToolGatewayError("Target snippet must match exactly once.")
+                            elif args.get("delete"):
+                                raise ToolGatewayError("Cannot delete a missing file.")
                             elif not read_before:
                                 raise ToolGatewayError("Read existing source conventions before creating files.")
+
+                        mode = ("delete" if args.get("delete") else "create" if "content" in args else "edit") if call.name == "apply_patch" else None
+                        if self.on_activity:
+                            await self.on_activity(tool_activity("SAMURAI", call.name, "intent", path=rel, mode=mode,
+                                                                 task_title=self.task_title))
 
                         output = self.gateway.execute_tool(
                             "SAMURAI", call.name, args, result.mission_id, workspace,
@@ -240,7 +255,12 @@ class SamuraiRunner:
                         )
                         if call.name == "apply_patch":
                             modified.add(rel)
-                            read_back.discard(rel)
+                            if args.get("delete"):
+                                # Deletion cannot be read back; the successful unlink
+                                # and the final diff are the required inspection.
+                                read_back.add(rel)
+                            else:
+                                read_back.discard(rel)
                             inspected.discard(rel)
                         elif call.name == "read_file":
                             read_before.add(rel)
@@ -252,6 +272,9 @@ class SamuraiRunner:
                         output["fingerprint"] = fingerprint
                         output = self._bounded_result(output)
                         replay[call.tool_use_id] = (signature, output)
+                        if self.on_activity:
+                            await self.on_activity(tool_activity("SAMURAI", call.name, "outcome", path=rel,
+                                                                 count=output.get("count"), mode=mode))
                     if output.get("status") == "ERROR":
                         consecutive_errors += 1
                     else:
@@ -268,6 +291,8 @@ class SamuraiRunner:
                     output = {"status": "ERROR", "error": error, "fingerprint": fingerprint}
                     replay.setdefault(call.tool_use_id, (signature, output))
                     consecutive_errors += 1
+                    if self.on_activity:
+                        await self.on_activity(tool_activity("SAMURAI", call.name, "failed"))
                 result.trace.append(ToolTrace(
                     turn=turn, tool_use_id=call.tool_use_id, tool=call.name,
                     status=status, fingerprint=fingerprint,

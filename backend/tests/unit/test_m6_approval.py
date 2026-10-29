@@ -1,14 +1,19 @@
 import asyncio
+import json
 import httpx
 import pytest
 
 from app.schemas.approval import ApprovalRequest, ApplyPatchRequest, ApprovalDecision
 from app.schemas.candidate import Candidate
 from app.schemas.evidence import Evidence
+from app.schemas.evidence import EvidenceKind
 from app.schemas.mission import CriterionStatus, MissionStatus
 from app.services.approval_service import ApprovalService
 from app.storage.guild import GuildConflict
 from tests.unit.test_m5_recovery import recovery, run
+from tests.report_fixtures import passing_report
+from app.services.test_reports import object_hash
+from app.services.criterion_checks import verification_contract_hash
 
 
 async def prepared(recovery):
@@ -16,6 +21,27 @@ async def prepared(recovery):
     executor.never_fail = True
     result = await run(recovery)
     assert result.status == MissionStatus.VERIFYING, result.failure_reason
+    criterion = (await controller.db.get_criteria(mission.id))[0]
+    criterion.verification_method = "test_profile:python_pytest|test_app.py::test_value"
+    bound = Evidence(mission_id=mission.id, candidate_id=result.active_candidate_id,
+                     fingerprint=next(c.content_fingerprint for c in await controller.store.records(Candidate, mission.id) if c.id == result.active_candidate_id),
+                     criterion_id=criterion.id, kind=EvidenceKind.TEST, source="SENTINEL", exit_code=0,
+                     command=["docker", "run", "python", "-m", "pytest", "--", "test_app.py::test_value"],
+                     metadata={"check_profile": "python_pytest", "test_selector": "test_app.py::test_value",
+                               "execution_status": "SUCCEEDED", "stdout": "1 passed", "output_truncated": False})
+    async with controller.store.transaction() as connection:
+        await controller.store._save(connection, criterion)
+        await controller.store._save(connection, bound)
+    contract = verification_contract_hash(controller.workspaces.get_candidate_dir(mission.id, result.active_candidate_id), [criterion])
+    records = [e for e in await controller.store.records(Evidence, mission.id)
+               if e.candidate_id == result.active_candidate_id and e.metadata.get("check_profile")]
+    for record in records:
+        report = passing_report("test_app.py::test_value")
+        artifact, _ = controller.artifacts.save_artifact(mission.id, "pytest-report.json", json.dumps(report))
+        record.metadata.update(report=report, report_hash=object_hash(report), report_artifact_id=artifact,
+                               verification_contract_hash=contract, output_truncated=False)
+        async with controller.store.transaction() as connection:
+            await controller.store._save(connection, record)
     return controller, mission, repo, ApprovalService(controller), result.active_candidate_id
 
 
@@ -75,7 +101,7 @@ async def test_original_or_snapshot_changes_block_application(recovery, change):
 @pytest.mark.parametrize("damage", ["missing_check", "fake_pass", "skipped", "failed", "stale_fingerprint"])
 async def test_independent_verifier_rejects_untrustworthy_evidence(recovery, damage):
     controller, mission, _, service, candidate_id = await prepared(recovery)
-    evidence = [e for e in await controller.store.records(Evidence, mission.id) if e.candidate_id == candidate_id and e.metadata.get("check_profile")]
+    evidence = [e for e in await controller.store.records(Evidence, mission.id) if e.candidate_id == candidate_id and e.criterion_id]
     assert len(evidence) == 1
     record = evidence[0]
     async with controller.store.transaction() as db:
@@ -92,6 +118,29 @@ async def test_independent_verifier_rejects_untrustworthy_evidence(recovery, dam
     result = await service.verify(mission.id)
     assert result.status == MissionStatus.FAILED_VERIFICATION
     assert all(c.status == CriterionStatus.NOT_VERIFIED for c in await controller.db.get_criteria(mission.id))
+
+
+@pytest.mark.asyncio
+async def test_unmapped_or_wrong_candidate_criterion_evidence_cannot_verify(recovery):
+    controller, mission, _, service, candidate_id = await prepared(recovery)
+    criterion = (await controller.db.get_criteria(mission.id))[0]
+    async with controller.store.transaction() as connection:
+        await connection.execute("UPDATE criteria SET verification_method=? WHERE id=?", ("test_profile:python_pytest", criterion.id))
+    assert (await service.verify(mission.id)).status == MissionStatus.FAILED_VERIFICATION
+
+
+@pytest.mark.asyncio
+async def test_approved_candidate_rejects_tampered_structured_report(recovery):
+    from app.schemas.approval import Approval
+    controller, mission, _, service, candidate_id = await prepared(recovery)
+    assert (await service.verify(mission.id)).status == MissionStatus.VERIFIED_AWAITING_APPROVAL
+    candidate = next(c for c in await controller.store.records(Candidate, mission.id) if c.id == candidate_id)
+    for path in (controller.artifacts.base_dir / mission.id).glob("*pytest-report.json"):
+        path.write_text('{"tampered":true}')
+    with pytest.raises(GuildConflict, match="Verification evidence"):
+        await service.decide(mission.id, ApprovalRequest(candidate_id=candidate_id,
+            candidate_fingerprint=candidate.content_fingerprint, decision=ApprovalDecision.APPROVED))
+    assert not await controller.store.records(Approval, mission.id)
 
 
 @pytest.mark.asyncio

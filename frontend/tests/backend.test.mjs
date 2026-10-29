@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { activeCandidate, approvedCandidate, checkedCandidate, sequenceUpdate } from "../src/lib/backend.ts";
+import { activeCandidate, approvedCandidate, checkedCandidate, eventSummary, sequenceUpdate } from "../src/lib/backend.ts";
 
 function detail() {
   return { mission: { active_candidate_id: "v2" }, candidates: [{ id: "v1", content_fingerprint: "old" }, { id: "v2", content_fingerprint: "new" }],
@@ -29,4 +29,11 @@ test("SSE cursor rejects replay and detects gaps", () => {
   assert.equal(sequenceUpdate(3, 4), "next");
   assert.equal(sequenceUpdate(3, 7), "gap");
   assert.equal(sequenceUpdate(0, Number.NaN), "duplicate");
+});
+
+test("activity timeline shows persisted summary and falls back for legacy events", () => {
+  const event = { event_type: "AGENT_ACTIVITY", display_payload: { summary: "Samurai read `routes.py` to inspect conventions." } };
+  assert.equal(eventSummary(event), "Samurai read `routes.py` to inspect conventions.");
+  assert.equal(eventSummary({ event_type: "PLAN_READY", display_payload: {} }), "PLAN_READY");
+  assert.equal(eventSummary({ event_type: "AGENT_ACTIVITY", display_payload: { summary: 9 } }), "AGENT_ACTIVITY");
 });

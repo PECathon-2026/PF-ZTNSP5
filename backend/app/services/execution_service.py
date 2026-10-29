@@ -1,6 +1,7 @@
 """Cancellable, bounded, container-only execution for Sentinel."""
 
 import asyncio
+import json
 import re
 import shutil
 from pathlib import Path
@@ -8,6 +9,9 @@ from time import monotonic
 from uuid import uuid4
 
 from app.settings import get_settings
+
+
+REPORT_MARKER = "\nKAGE_CHECK_REPORT:"
 
 
 class ContainerExecutor:
@@ -30,17 +34,23 @@ class ContainerExecutor:
             return False
 
     def command(self, directory: Path, profile: str, name: str, selector: str | None = None):
-        if profile not in {"python_pytest", "python_syntax"}:
+        if profile not in {"python_pytest", "python_collect", "python_syntax", "python_bandit"}:
             raise ValueError("Unsupported check profile")
         if selector and (
-            not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_./:-]*", selector)
+            not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_./:\[\], -]*", selector)
             or ".." in selector or selector.startswith(("/", "-")) or ":" in selector.split("::")[0]
         ):
             raise ValueError("Invalid test selector")
-        if profile == "python_pytest":
-            check = ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider"]
+        if profile in {"python_pytest", "python_collect"}:
+            check = ["python", "/opt/kage/container_check_runner.py"]
+            if profile == "python_collect":
+                check.append("--collect-only")
             if selector:
                 check += ["--", selector]
+        elif profile == "python_bandit":
+            if selector:
+                raise ValueError("Bandit does not accept a test selector")
+            check = ["python", "-m", "bandit", "-r", ".", "-f", "json", "-q", "--ignore-nosec"]
         else:
             check = ["python", "-X", "pycache_prefix=/tmp/pycache", "-m", "compileall", "-q", "."]
         settings = get_settings()
@@ -87,6 +97,7 @@ class ContainerExecutor:
         except ValueError:
             return {**result, "status": "DENIED", "stderr": "Unsupported check profile or invalid test selector."}
         result["command"] = command
+        result["execution_source"] = "docker"
         if not await self.available():
             result["stderr"] = (
                 "BLOCKED: Docker Desktop Linux Engine is unavailable. Start Docker Desktop. "
@@ -112,6 +123,26 @@ class ContainerExecutor:
             streams = await asyncio.gather(*readers)
             result["stdout"], result["stderr"] = streams[0][0], streams[1][0]
             result["output_truncated"] = any(item[1] for item in streams)
+            if check_profile in {"python_pytest", "python_collect"}:
+                if REPORT_MARKER in result["stdout"]:
+                    text, _, raw = result["stdout"].rpartition(REPORT_MARKER)
+                    result["stdout"] = text
+                    try:
+                        parsed = json.loads(raw.strip())
+                        if isinstance(parsed, dict) and parsed.get("exitcode") == result["exit_code"]:
+                            result["report"] = parsed
+                    except ValueError:
+                        pass
+            elif check_profile == "python_bandit":
+                try:
+                    raw = json.loads(result["stdout"])
+                    result["report"] = {"results": [{key: item.get(key) for key in (
+                        "test_id", "issue_severity", "issue_confidence", "filename", "line_number", "issue_text")}
+                        for item in raw.get("results", [])[:100]], "errors": raw.get("errors", [])[:10],
+                        "truncated": len(raw.get("results", [])) > 100}
+                    result["stdout"] = f"Bandit reported {len(raw.get('results', []))} findings."
+                except ValueError:
+                    pass
         except OSError:
             result["stderr"] = "Container launch failed. Check Docker and the prebuilt check image."
         finally:

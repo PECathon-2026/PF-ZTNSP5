@@ -229,7 +229,7 @@ class GuildStore:
             row = await (await connection.execute("SELECT status FROM missions WHERE id=?", (mission_id,))).fetchone()
             if not row:
                 raise KeyError("Mission not found")
-            if row[0] in {"APPLIED", "REJECTED", "CANCELLED", "CANCEL_REQUESTED"}:
+            if row[0] in {"APPLYING", "APPLIED", "REJECTED", "CANCELLED", "CANCEL_REQUESTED"}:
                 raise GuildConflict("Mission is already terminal")
             await connection.execute(
                 "UPDATE missions SET cancel_requested=1,status='CANCEL_REQUESTED',updated_at=? WHERE id=?", (now(), mission_id),

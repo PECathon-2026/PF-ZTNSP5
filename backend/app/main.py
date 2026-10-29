@@ -26,6 +26,8 @@ async def lifespan(app: FastAPI):
         controller = guild_service.GuildController(database=db)
         guild_service._controller = controller
     await controller.store.recover()
+    from app.services.patch_application import PatchApplication
+    await PatchApplication(controller).recover_pending()
     try:
         yield
     finally:

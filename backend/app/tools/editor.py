@@ -15,12 +15,21 @@ def apply_patch(
     target: str | None = None,
     replacement: str | None = None,
     content: str | None = None,
+    delete: bool = False,
 ) -> dict[str, Any]:
     """
     Applies a targeted edit to a file inside the mutable workspace.
     Either replaces occurrences of `target` with `replacement`, or sets full `content`.
     """
     target_path = canonicalize_and_validate_path(workspace_dir, relative_path)
+    if (workspace_dir / relative_path).is_symlink():
+        raise PatchError("Symlinked files cannot be edited.")
+
+    if delete:
+        if target is not None or replacement is not None or content is not None or not target_path.is_file():
+            raise PatchError("Deletion requires an existing regular file and no edit content.")
+        target_path.unlink()
+        return {"file_path": relative_path.replace("\\", "/"), "status": "APPLIED", "mode": "deleted"}
 
     # Mode 1: Full content write/create
     if content is not None:

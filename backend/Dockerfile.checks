@@ -1,4 +1,6 @@
-FROM python:3.12-slim
-RUN pip install --no-cache-dir pytest==8.3.5
+FROM python:3.12.16-slim-trixie@sha256:8523d6abeb48ceae0b7240d30c5808fc26cb79c1a635bacdf19cf3baecfbec07
+RUN python -m pip install --no-cache-dir pytest==9.0.3 pytest-json-report==1.5.0 bandit==1.9.4 \
+    && python -m pip uninstall --yes pip
+COPY container_check_runner.py /opt/kage/container_check_runner.py
 USER 1001:1001
 WORKDIR /workspace

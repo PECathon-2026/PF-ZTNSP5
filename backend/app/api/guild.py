@@ -13,8 +13,28 @@ from app.security.paths import PathSecurityError
 from app.services.guild_service import get_guild_controller
 from app.storage.guild import GuildConflict
 from app.tools.files import read_file
+from app.services.proof_card import proof_card, proof_markdown
 
 router = APIRouter(prefix="/api/missions", tags=["Guild"])
+
+
+@router.get("/{mission_id}/proof")
+async def candidate_proof(mission_id: str, format: str = "json"):
+    if format not in {"json", "markdown"}:
+        raise HTTPException(status_code=422, detail="Choose json or markdown")
+    detail = await get_mission(mission_id)
+    controller = get_guild_controller()
+    context = await controller.store.context(mission_id) or {}
+    events = await controller.db.get_events(mission_id, limit=100)  # bounded first batch
+    # Include later events in sequence so a long repair run has its latest decisions.
+    timeline = list(events)
+    while events:
+        events = await controller.db.get_events(mission_id, after_sequence=events[-1].sequence, limit=100)
+        timeline.extend(events)
+        if len(timeline) > 2000:
+            timeline = timeline[-2000:]
+    card = proof_card(detail, context, timeline)
+    return PlainTextResponse(proof_markdown(card), media_type="text/markdown") if format == "markdown" else card
 
 
 @router.post("/{mission_id}/verify")

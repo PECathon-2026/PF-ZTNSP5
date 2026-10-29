@@ -162,6 +162,12 @@ CREATE TABLE IF NOT EXISTS events (
     FOREIGN KEY(mission_id) REFERENCES missions(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS application_operations (
+    mission_id TEXT PRIMARY KEY REFERENCES missions(id) ON DELETE CASCADE,
+    candidate_id TEXT NOT NULL,
+    journal_path TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS guild_context (
     mission_id TEXT PRIMARY KEY REFERENCES missions(id) ON DELETE CASCADE,
     context_json TEXT NOT NULL
@@ -430,6 +436,7 @@ class Database:
     ) -> MissionEvent:
         now = datetime.now(timezone.utc)
         evidence_list = evidence_ids or []
+        safe_payload = json.loads(redact_secrets(json.dumps(display_payload)))
         async with aiosqlite.connect(self.db_path) as db:
             # Determine next sequence monotonically
             await db.execute("BEGIN IMMEDIATE")
@@ -455,7 +462,7 @@ class Database:
                     task_id,
                     candidate_id,
                     json.dumps(evidence_list),
-                    redact_secrets(json.dumps(display_payload)),
+                    json.dumps(safe_payload),
                     now.isoformat(),
                 ),
             )
@@ -469,7 +476,7 @@ class Database:
                 task_id=task_id,
                 candidate_id=candidate_id,
                 evidence_ids=evidence_list,
-                display_payload=display_payload,
+                display_payload=safe_payload,
                 created_at=now,
             )
 

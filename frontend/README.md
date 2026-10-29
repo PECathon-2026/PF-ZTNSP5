@@ -22,6 +22,11 @@ Start the backend separately from `backend/` with `python -m uvicorn app.main:ap
 
 The landing page loads actual `/api/health` readiness and `/api/missions` history. Setup connects a local repository and requires a non-blocked preflight, a request and at least one acceptance criterion. After Shogun plans, the Dojo waits for explicit authorization. It refreshes canonical mission details on each persisted SSE event and on reconnect, deduplicates monotonic sequences, detects gaps and closes the stream on terminal events. Approval controls appear only for a verified current candidate, with its full fingerprint visible before the user decides.
 
+The Dojo activity list renders the backend's concise `AGENT_ACTIVITY` summaries
+with agent attribution, and falls back to event names for older records. A
+summary describes validated tool intent or observed outcome; it is not raw model
+reasoning. Backend progress records and replay remain authoritative.
+
 Docker Desktop Linux engine and the prebuilt check image are required for live planning/checks; unavailable Docker is shown as blocked by the backend, not simulated as passing. For the M7 implementation/check report see `../backend/M7_STATUS.md`.
 
 ## Future phases

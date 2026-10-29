@@ -39,9 +39,14 @@ class PatchArguments(FileArguments):
     target: str | None = Field(default=None, min_length=1, max_length=524288)
     replacement: str | None = Field(default=None, max_length=524288)
     content: str | None = Field(default=None, max_length=524288)
+    delete: bool = False
 
     @model_validator(mode="after")
     def one_patch_mode(self):
+        if self.delete:
+            if any(value is not None for value in (self.target, self.replacement, self.content)):
+                raise ValueError("delete cannot be combined with edit fields")
+            return self
         if self.content is not None:
             if self.target is not None or self.replacement is not None:
                 raise ValueError("content cannot be combined with target/replacement")
@@ -55,10 +60,11 @@ class SubmitArguments(ToolArguments):
 
 
 TOOL_CONTRACTS: dict[str, tuple[type[ToolArguments], str]] = {
+    "repo_map": (ToolArguments, "Get a bounded, current map of Python functions, classes, imports and test locations. Read relevant source afterward."),
     "list_files": (ListFilesArguments, "List approved workspace files; returns current workspace fingerprint."),
     "read_file": (ReadFileArguments, "Read a workspace file. Read existing files before editing and read changes back afterward."),
     "search_text": (SearchArguments, "Search approved files for literal text (at most 50 matches)."),
-    "apply_patch": (PatchArguments, "Edit a source file using the latest expected_fingerprint returned by a tool. Use a unique target snippet and replacement, or content to create a file. Protected tests cannot be changed."),
+    "apply_patch": (PatchArguments, "Edit a source file using the latest expected_fingerprint returned by a tool. Use a unique target snippet and replacement, content to create a file, or delete=true for an existing file you already read. Protected tests cannot be changed."),
     "read_diff": (FileArguments, "Inspect a file's diff against the captured baseline after its final edit."),
     "submit_candidate": (SubmitArguments, "Hand off the candidate after reading back and inspecting the diff of every changed file. This does not certify tests or approve application."),
 }

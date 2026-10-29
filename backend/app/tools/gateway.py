@@ -6,11 +6,12 @@ from app.tools.search import search_text
 from app.tools.editor import apply_patch
 from app.tools.diff import read_diff
 from app.tools.checks import run_check
+from app.services.repo_map import repository_map
 
 # Role permission matrix
 ALLOWED_ROLE_TOOLS: dict[str, set[str]] = {
-    "SHOGUN": {"list_files", "search_text", "read_file", "request_clarification"},
-    "SAMURAI": {"list_files", "search_text", "read_file", "apply_patch", "read_diff"},
+    "SHOGUN": {"list_files", "search_text", "read_file", "repo_map", "request_clarification"},
+    "SAMURAI": {"list_files", "search_text", "read_file", "repo_map", "apply_patch", "read_diff"},
     "SENTINEL": {"list_files", "read_file", "run_check", "report_finding"},
     "SHADOW_COUNCIL": {"list_files", "read_file", "read_diff", "report_finding"},
 }
@@ -49,7 +50,9 @@ class ToolGateway:
                 f"Tool '{tool_name}' is not permitted for role '{agent_role}'."
             )
 
-        if tool_name == "list_files":
+        if tool_name == "repo_map":
+            return {"status": "SUCCEEDED", **repository_map(workspace_dir)}
+        elif tool_name == "list_files":
             subpath = arguments.get("subpath", "")
             files = list_files(workspace_dir, subpath)
             return {"status": "SUCCEEDED", "files": files, "count": len(files)}
@@ -85,8 +88,9 @@ class ToolGateway:
             target = arguments.get("target")
             replacement = arguments.get("replacement")
             content = arguments.get("content")
+            delete = arguments.get("delete", False)
 
-            res = apply_patch(workspace_dir, rel_path, target, replacement, content)
+            res = apply_patch(workspace_dir, rel_path, target, replacement, content, delete)
             return {"status": "SUCCEEDED", "patch": res}
 
         elif tool_name == "read_diff":

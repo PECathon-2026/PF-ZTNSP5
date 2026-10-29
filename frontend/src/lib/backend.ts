@@ -41,3 +41,8 @@ export function sequenceUpdate(previous: number, received: number): "duplicate" 
   if (!Number.isSafeInteger(received) || received < 1 || received <= previous) return "duplicate";
   return received === previous + 1 ? "next" : "gap";
 }
+
+export function eventSummary(event: MissionEvent): string {
+  const value = event.display_payload?.summary;
+  return typeof value === "string" && value.trim() ? value.slice(0, 360) : event.event_type;
+}
