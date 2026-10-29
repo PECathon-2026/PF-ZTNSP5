@@ -1,7 +1,9 @@
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import Link from "next/link";
-import { InspectionTabs } from "@/components/inspection-tabs";
 
 export const metadata: Metadata = { title: "Dojo" };
 
-export default function DojoPage() { return <div className="interior-page dojo-page"><header className="dojo-heading"><div><p className="eyebrow">THE DOJO / NO ACTIVE MISSION</p><h1>Engineering workspace</h1><p>Real files, agent activity, checks, and evidence will appear only when a mission is connected.</p></div><Link className="outline-button" href="/setup">Prepare mission ↗</Link></header><div className="dojo-frame" aria-label="Workspace unavailable until a mission is connected"><aside className="dojo-explorer"><div className="pane-heading">REPOSITORY EXPLORER <span aria-hidden="true">◇</span></div><div className="pane-empty"><h2>No connected repository</h2><p>Files can be shown only after the backend authorizes and returns a repository tree.</p></div></aside><section className="dojo-editor" aria-labelledby="editor-title"><div className="pane-heading" id="editor-title">EDITOR <span>NO FILE OPEN</span></div><div className="editor-empty"><span aria-hidden="true">影</span><h2>Awaiting a mission</h2><p>Code and candidate changes appear only from an authorized repository. Editing is unavailable without a safe backend operation.</p><Link href="/setup" className="text-action">Prepare the brief ↗</Link></div></section><aside className="dojo-activity"><div className="pane-heading">GUILD ACTIVITY <span aria-hidden="true">◌</span></div><div className="pane-empty"><h2>No live events</h2><p>Agent activity appears when reported by a connected mission. Nothing is simulated.</p></div></aside><InspectionTabs /></div><p className="dojo-warning">No candidate, diff, verification, or approval is available without authoritative backend data. No changes can be applied from this screen.</p></div>; }
+export default function DojoPage() {
+  redirect("/");
+  return null;
+}
