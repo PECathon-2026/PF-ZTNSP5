@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, status
+import asyncio
+from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from app.schemas.mission import (
     AcceptanceCriterion,
@@ -8,6 +10,11 @@ from app.schemas.mission import (
     MissionStatus,
 )
 from app.schemas.task import MissionTask
+from app.schemas.events import MissionEvent
+from app.schemas.candidate import Candidate
+from app.schemas.evidence import Evidence
+from app.schemas.finding import Finding
+from app.schemas.approval import Approval
 from app.storage.database import get_database
 
 router = APIRouter(prefix="/api/missions", tags=["Missions"])
@@ -17,6 +24,17 @@ class MissionDetailResponse(BaseModel):
     mission: Mission
     criteria: list[AcceptanceCriterion] = Field(default_factory=list)
     tasks: list[MissionTask] = Field(default_factory=list)
+
+
+class MissionReportResponse(BaseModel):
+    mission: Mission
+    criteria: list[AcceptanceCriterion] = Field(default_factory=list)
+    tasks: list[MissionTask] = Field(default_factory=list)
+    events: list[MissionEvent] = Field(default_factory=list)
+    candidates: list[Candidate] = Field(default_factory=list)
+    findings: list[Finding] = Field(default_factory=list)
+    evidence: list[Evidence] = Field(default_factory=list)
+    approvals: list[Approval] = Field(default_factory=list)
 
 
 @router.post("", response_model=MissionDetailResponse, status_code=status.HTTP_201_CREATED)
@@ -123,4 +141,92 @@ async def cancel_mission(mission_id: str) -> MissionDetailResponse:
         criteria=criteria,
         tasks=tasks,
     )
+
+
+@router.get("/{mission_id}/report", response_model=MissionReportResponse)
+async def get_mission_report(mission_id: str) -> MissionReportResponse:
+    """
+    Authoritative snapshot for the command center and evidence screens:
+    mission, criteria, tasks, events, candidates, findings, evidence and approvals.
+    """
+    db = get_database()
+    mission = await db.get_mission(mission_id)
+    if not mission:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Mission '{mission_id}' not found.",
+        )
+
+    return MissionReportResponse(
+        mission=mission,
+        criteria=await db.get_criteria(mission_id),
+        tasks=await db.get_tasks(mission_id),
+        events=await db.get_events(mission_id, after_sequence=0),
+        candidates=await db.get_candidates(mission_id),
+        findings=await db.get_findings(mission_id),
+        evidence=await db.get_evidence(mission_id),
+        approvals=await db.get_approvals(mission_id),
+    )
+
+
+@router.get("/{mission_id}/events")
+async def get_mission_events(
+    mission_id: str,
+    request: Request,
+    after: int = Query(0, ge=0, description="Return events with sequence greater than this cursor"),
+):
+    """
+    Mission event stream (spec §6.4).
+
+    - Default: JSON list of persisted events after the given sequence.
+    - `Accept: text/event-stream`: SSE stream with `id` set to the monotonic
+      sequence, replayable via `Last-Event-ID`, plus comment heartbeats.
+    """
+    db = get_database()
+    mission = await db.get_mission(mission_id)
+    if not mission:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Mission '{mission_id}' not found.",
+        )
+
+    accept_header = (request.headers.get("accept") or "").lower()
+    last_event_id = request.headers.get("last-event-id")
+    start_cursor = after
+    if last_event_id and last_event_id.isdigit():
+        start_cursor = max(start_cursor, int(last_event_id))
+
+    if "text/event-stream" in accept_header:
+        async def event_stream():
+            cursor = start_cursor
+            heartbeat_ticks = 0
+            yield "retry: 2000\n\n"
+            try:
+                while True:
+                    events = await db.get_events(mission_id, after_sequence=cursor)
+                    for event in events:
+                        cursor = event.sequence
+                        yield (
+                            f"id: {event.sequence}\n"
+                            f"event: mission\n"
+                            f"data: {event.model_dump_json()}\n\n"
+                        )
+                    heartbeat_ticks += 1
+                    if heartbeat_ticks % 15 == 0:
+                        yield f": heartbeat {cursor}\n\n"
+                    await asyncio.sleep(1.0)
+            except asyncio.CancelledError:
+                raise
+
+        return StreamingResponse(
+            event_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    return await db.get_events(mission_id, after_sequence=start_cursor)
 

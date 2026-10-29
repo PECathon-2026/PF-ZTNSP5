@@ -1,0 +1,121 @@
+.missions-page {
+  padding-block: 2rem clamp(2rem, 4vh, 3rem);
+}
+
+.missions-filter {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: rgba(32, 33, 39, 0.7);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.filter-chip.is-active {
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.filter-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chip-count {
+  border: 1px solid rgba(239, 228, 205, 0.3);
+  background: rgba(239, 228, 205, 0.08);
+  border-radius: 4px;
+  padding: 0 0.35rem;
+  font-size: var(--text-2xs);
+  color: var(--color-text-subtle);
+}
+
+.missions-table {
+  margin-top: 1rem;
+}
+
+.mission-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mission-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr) 120px auto;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-panel-deep);
+  color: var(--color-text);
+  text-decoration: none;
+  transition:
+    border-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease;
+}
+
+.mission-row:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-gold);
+  border-color: var(--color-gold);
+}
+
+.mission-row__id {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.mission-row__status {
+  white-space: nowrap;
+}
+
+.mission-row__request {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.mission-row__time {
+  font-size: var(--text-2xs);
+  color: var(--color-text-subtle);
+  text-align: right;
+}
+
+.mission-row__go {
+  opacity: 0;
+  transition: opacity var(--duration-fast) ease;
+}
+
+.mission-row:hover {
+  border-color: var(--color-border-strong);
+}
+
+.mission-row:hover .mission-row__go {
+  opacity: 1;
+}
+
+.state-block h3 {
+  font-size: var(--text-lg);
+  margin: 0 0 0.4rem;
+}

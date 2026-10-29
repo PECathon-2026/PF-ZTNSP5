@@ -477,6 +477,119 @@ class Database:
         return events
 
 
+    async def get_candidates(self, mission_id: str) -> list[Candidate]:
+        candidates: list[Candidate] = []
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM candidates WHERE mission_id = ? ORDER BY created_at ASC",
+                (mission_id,),
+            )
+            rows = await cursor.fetchall()
+            for row in rows:
+                candidates.append(
+                    Candidate(
+                        id=row["id"],
+                        mission_id=row["mission_id"],
+                        parent_candidate_id=row["parent_candidate_id"],
+                        workspace_snapshot_id=row["workspace_snapshot_id"],
+                        content_fingerprint=row["content_fingerprint"],
+                        changed_files=json.loads(row["changed_files_json"]),
+                        criteria_version=row["criteria_version"],
+                        state=CandidateState(row["state"]),
+                        ui_badge=row["ui_badge"],
+                        created_at=datetime.fromisoformat(row["created_at"]),
+                    )
+                )
+        return candidates
+
+    async def get_evidence(self, mission_id: str) -> list[Evidence]:
+        records: list[Evidence] = []
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM evidence WHERE mission_id = ? ORDER BY created_at ASC",
+                (mission_id,),
+            )
+            rows = await cursor.fetchall()
+            for row in rows:
+                records.append(
+                    Evidence(
+                        id=row["id"],
+                        mission_id=row["mission_id"],
+                        candidate_id=row["candidate_id"],
+                        criterion_id=row["criterion_id"],
+                        kind=EvidenceKind(row["kind"]),
+                        source=row["source"],
+                        command=json.loads(row["command_json"]),
+                        exit_code=row["exit_code"],
+                        duration_ms=row["duration_ms"],
+                        stdout_artifact_id=row["stdout_artifact_id"],
+                        stderr_artifact_id=row["stderr_artifact_id"],
+                        fingerprint=row["fingerprint"],
+                        metadata=json.loads(row["metadata_json"]),
+                        created_at=datetime.fromisoformat(row["created_at"]),
+                    )
+                )
+        return records
+
+    async def get_findings(self, mission_id: str) -> list[Finding]:
+        records: list[Finding] = []
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM findings WHERE mission_id = ? ORDER BY created_at ASC",
+                (mission_id,),
+            )
+            rows = await cursor.fetchall()
+            for row in rows:
+                records.append(
+                    Finding(
+                        id=row["id"],
+                        mission_id=row["mission_id"],
+                        source_agent=row["source_agent"],
+                        severity=FindingSeverity(row["severity"]),
+                        title=row["title"],
+                        description=row["description"],
+                        file_path=row["file_path"],
+                        line_start=row["line_start"],
+                        line_end=row["line_end"],
+                        observed_behavior=row["observed_behavior"],
+                        expected_behavior=row["expected_behavior"],
+                        evidence_ids=json.loads(row["evidence_ids_json"]),
+                        candidate_id=row["candidate_id"],
+                        status=FindingStatus(row["status"]),
+                        resolution_evidence_ids=json.loads(row["resolution_evidence_ids_json"]),
+                        created_at=datetime.fromisoformat(row["created_at"]),
+                    )
+                )
+        return records
+
+    async def get_approvals(self, mission_id: str) -> list[Approval]:
+        records: list[Approval] = []
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM approvals WHERE mission_id = ? ORDER BY decided_at ASC",
+                (mission_id,),
+            )
+            rows = await cursor.fetchall()
+            for row in rows:
+                records.append(
+                    Approval(
+                        id=row["id"],
+                        mission_id=row["mission_id"],
+                        candidate_id=row["candidate_id"],
+                        candidate_fingerprint=row["candidate_fingerprint"],
+                        intended_action=row["intended_action"],
+                        decision=ApprovalDecision(row["decision"]),
+                        decided_at=datetime.fromisoformat(row["decided_at"]),
+                        application_result_id=row["application_result_id"],
+                    )
+                )
+        return records
+
+
 _db_instance: Database | None = None
 
 

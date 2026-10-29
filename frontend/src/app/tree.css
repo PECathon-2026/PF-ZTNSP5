@@ -1,0 +1,78 @@
+.tree-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.tree-filter {
+  padding-block: 0.45rem;
+}
+
+.tree-scroll {
+  max-height: 268px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-panel-deep);
+  padding: 0.4rem 0;
+}
+
+.tree-list,
+.tree-group {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree-toggle,
+.tree-file {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.22rem 0.6rem;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-align: left;
+  border-radius: 4px;
+}
+
+.tree-toggle {
+  transition:
+    background var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+
+.tree-toggle:hover {
+  background: rgba(239, 228, 205, 0.06);
+  color: var(--color-text);
+}
+
+.tree-glyph {
+  width: 0.9rem;
+  text-align: center;
+  color: var(--color-gold);
+  flex-shrink: 0;
+  font-size: 0.7rem;
+}
+
+.tree-dir > .tree-toggle .tree-glyph {
+  color: var(--color-text-subtle);
+}
+
+.tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-file .tree-name {
+  font-family: var(--font-mono);
+}
+
+.tree-empty {
+  padding: 0.8rem;
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
