@@ -1,0 +1,31 @@
+# DevPilot / KAGE AI .gitignore
+
+# Python & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+venv/
+.venv/
+env/
+
+# Pytest & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local databases and runtime data
+/data/
+*.db
+*.sqlite3
+
+# Node & Frontend
+node_modules/
+.next/
+dist/
+
+# OS specific
+.DS_Store
+Thumbs.db
+

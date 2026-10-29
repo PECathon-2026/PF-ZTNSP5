@@ -295,14 +295,27 @@ Do not expose sensitive absolute paths unnecessarily. Treat file names and repos
 
 ### Preflight states
 
-Use distinct visible states:
+Use distinct visible states returned by `POST /api/repositories/connect`:
 
-- `READY`
-- `WARNING`
-- `BLOCKED`
-- `CHECKING`
+- `READY` — Repository authorized, inclusion manifest built, and baseline environment verified.
+- `WARNING` — Non-blocking issues detected (e.g. untracked modifications or missing optional tools).
+- `BLOCKED` — Hard blockers preventing mission execution (e.g. invalid path, path traversal attempt, missing runtime, or Docker daemon unavailable).
+- `CHECKING` — Preflight reconnaissance in progress.
 
-Each state must include text/icon and a reason. A warning must not be styled like a blocker; a blocker must not be bypassable by a decorative CTA.
+Each state must include text/icon and a reason. A warning must not be styled like a blocker; a blocker must not be bypassable by a decorative CTA. The backend returns:
+```json
+{
+  "repository_id": "repo-...",
+  "preflight": {
+    "status": "READY | WARNING | BLOCKED",
+    "detected_profile": "python_pytest",
+    "file_count": 14,
+    "excluded_count": 32,
+    "warnings": [],
+    "blockers": []
+  }
+}
+```
 
 ---
 
@@ -565,6 +578,8 @@ The interface should support two distinct workflows where the backend allows the
 - Display the new candidate identity and actual verification result.
 
 If a safe editing or candidate-update endpoint does not exist, do not fake the workflow. Keep the code viewer read-only and clearly explain that editing through the UI is not currently available.
+
+> **Backend contract note:** To preserve the single-writer lease invariant (only the Samurai/Developer agent holds the write lock during candidate creation), user editing (Workflow B) is read-only in the initial release. File content is fetched via `GET /api/repositories/{id}/file?path=...` (baseline) and `GET /api/missions/{id}/candidates/{id}/file?path=...` (candidate snapshot). If an interactive user edit mode is authorized later, it will generate a distinct user candidate revision.
 
 ### Diff viewer
 
