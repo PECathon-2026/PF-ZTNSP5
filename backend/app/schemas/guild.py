@@ -12,6 +12,8 @@ CheckProfile = Literal["python_pytest", "python_syntax"]
 class PlannedCriterion(ToolArguments):
     description: str = Field(min_length=1, max_length=2000)
     check_profile: CheckProfile = "python_pytest"
+    test_selector: str | None = Field(default=None, max_length=300)
+    test_selectors: list[str] = Field(default_factory=list, max_length=20)
 
 
 class PlannedTask(ToolArguments):
@@ -21,10 +23,18 @@ class PlannedTask(ToolArguments):
     dependencies: list[str] = Field(default_factory=list, max_length=8)
 
 
+class TestGapProposal(ToolArguments):
+    criterion_description: str = Field(min_length=1, max_length=2000)
+    expected_behavior: str = Field(min_length=1, max_length=1000)
+    suggested_test: str = Field(min_length=1, max_length=200)
+    rationale: str = Field(min_length=1, max_length=1000)
+
+
 class GuildPlan(ToolArguments):
     summary: str = Field(min_length=1, max_length=2000)
     criteria: list[PlannedCriterion] = Field(min_length=1, max_length=20)
     tasks: list[PlannedTask] = Field(min_length=1, max_length=8)
+    test_gaps: list[TestGapProposal] = Field(default_factory=list, max_length=20)
 
     @model_validator(mode="after")
     def validate_graph(self):
@@ -33,6 +43,8 @@ class GuildPlan(ToolArguments):
             raise ValueError("Task keys must be unique")
         if len({c.description for c in self.criteria}) != len(self.criteria):
             raise ValueError("Criteria descriptions must be unique")
+        if any(gap.criterion_description not in {c.description for c in self.criteria} for gap in self.test_gaps):
+            raise ValueError("Test gap must refer to an acceptance criterion")
         pending = {task.key: set(task.dependencies) for task in self.tasks}
         if any(not dependencies <= keys for dependencies in pending.values()):
             raise ValueError("Unknown task dependency")

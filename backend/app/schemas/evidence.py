@@ -13,6 +13,7 @@ class EvidenceKind(str, Enum):
     DIFF = "DIFF"
     REVIEW_FINDING = "REVIEW_FINDING"
     BASELINE = "BASELINE"
+    MUTATION = "MUTATION"
 
 
 class Evidence(BaseModel):

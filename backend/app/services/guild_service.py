@@ -23,6 +23,10 @@ from app.storage.guild import GuildConflict, GuildStore
 from app.services.budgets import BudgetMeter, BudgetedAdapter, BudgetExceeded
 from app.settings import get_settings
 from app.security.paths import PathSecurityError
+from app.services.criterion_checks import criterion_profile, planned_selectors, verification_contract_hash
+from app.services.repo_map import repository_map
+from app.services.challenge import challenge_candidate
+from app.services.activity import safe_label
 
 
 class GuildController:
@@ -35,6 +39,17 @@ class GuildController:
         self.adapter_factory = adapter_factory or ModelAdapter
         self.auto_repair = auto_repair
         self.jobs: dict[str, asyncio.Task] = {}
+
+    def _activity(self, mission_id, role, task_id=None, candidate_id=None):
+        async def record(payload, actual_candidate_id=None, evidence_ids=None):
+            allowed = {"stage", "action", "summary", "relative_path", "check_profile",
+                       "test_selector", "criterion_id", "candidate_fingerprint", "finding_count", "task_count"}
+            display = {key: safe_label(value, 360) if isinstance(value, str) else value
+                       for key, value in payload.items() if key in allowed and value is not None}
+            await self.db.emit_event(mission_id, "AGENT_ACTIVITY", role, display,
+                                     task_id=task_id, candidate_id=actual_candidate_id or candidate_id,
+                                     evidence_ids=evidence_ids or [])
+        return record
 
     async def start(self, mission_id, phase, scope_version=None, auto_repair=None):
         if phase not in {"plan", "execute"}:
@@ -69,8 +84,12 @@ class GuildController:
         except Exception as exc:
             def exhausted(error):
                 return isinstance(error, (BudgetExceeded, TimeoutError)) or any(exhausted(child) for child in getattr(error, "exceptions", []))
+            origin = exc.__traceback__
+            while origin and origin.tb_next:
+                origin = origin.tb_next
+            location = f" in {origin.tb_frame.f_code.co_name}" if origin else ""
             await self._stop(mission_id, token, MissionStatus.BUDGET_EXHAUSTED if exhausted(exc) else MissionStatus.BLOCKED,
-                             "Guild execution budget exhausted" if exhausted(exc) else f"Guild operation stopped ({type(exc).__name__}); inspect configuration and evidence")
+                             "Guild execution budget exhausted" if exhausted(exc) else f"Guild operation stopped ({type(exc).__name__}{location}); inspect configuration and evidence")
         finally:
             if meter:
                 try:
@@ -89,6 +108,8 @@ class GuildController:
                 task.result_summary = reason
         try:
             await self.store.commit(mission_id, token, status=status, entities=tasks, failure_reason=reason, event="GUILD_STOPPED")
+            await self._activity(mission_id, "CONTROLLER")({"stage": "outcome", "action": "stop",
+                "summary": f"Mission stopped ({status.value}): {safe_label(reason, 200)}."})
         except GuildConflict:
             pass
 
@@ -182,8 +203,12 @@ class GuildController:
                 "baseline_candidate_id": baseline.id,
             }
             await self.store.commit(mission.id, token, entities=[baseline], context=context, event="BASELINE_FROZEN")
-            sentinel = await SentinelRunner(self.executor, self.workspaces, self.artifacts, meter.before_tool).run(baseline, ["python_pytest"], baseline=True)
+            profiles = ["python_pytest", "python_bandit"] if isinstance(self.executor, ContainerExecutor) else ["python_pytest"]
+            sentinel = await SentinelRunner(self.executor, self.workspaces, self.artifacts, meter.before_tool,
+                                            self._activity(mission.id, "SENTINEL", candidate_id=baseline.id)).run(baseline, profiles, baseline=True)
             await self.store.commit(mission.id, token, entities=[*sentinel.evidence, *sentinel.findings], event="BASELINE_CHECKED")
+            for evidence in sentinel.evidence:
+                await self._check_activity(mission.id, evidence)
             if sentinel.blocked:
                 await self._stop(mission.id, token, MissionStatus.BLOCKED, "Baseline checks unavailable; start Docker Desktop and prepare the check image")
                 return
@@ -193,10 +218,12 @@ class GuildController:
             "request": mission.request_text, "criteria": [c.model_dump(mode="json") for c in criteria],
             "baseline_checks": [self._evidence_context(e) for e in baseline_evidence],
             "clarification_answers": await self._answers(mission.id),
+            "repository_map": repository_map(self.workspaces.get_baseline_dir(mission.id)),
         }
         await self.store.commit(mission.id, token, status=MissionStatus.PLANNING, event="SHOGUN_STARTED")
         async with self.adapter_factory() as raw_adapter:
-            result = await ShogunRunner(BudgetedAdapter(raw_adapter, meter), self.workspaces, meter.before_tool).run(
+            result = await ShogunRunner(BudgetedAdapter(raw_adapter, meter), self.workspaces, meter.before_tool,
+                                        self._activity(mission.id, "SHOGUN")).run(
                 mission.id, self.workspaces.get_baseline_dir(mission.id), planner_context,
                 max_turns=min(12, mission.budgets.max_model_turns), max_tools=mission.budgets.max_tool_calls,
             )
@@ -208,7 +235,8 @@ class GuildController:
         planned_criteria = []
         for item in plan.criteria:
             criterion = existing.get(item.description) or AcceptanceCriterion(mission_id=mission.id, description=item.description)
-            criterion.verification_method = f"test_profile:{item.check_profile}"
+            selectors = planned_selectors(item)
+            criterion.verification_method = f"test_profile:{item.check_profile}" + ("|" + json.dumps(selectors) if selectors else "")
             planned_criteria.append(criterion)
         tasks = {item.key: MissionTask(mission_id=mission.id, title=item.title, description=item.description, owner_agent="SAMURAI") for item in plan.tasks}
         for item in plan.tasks:
@@ -227,9 +255,27 @@ class GuildController:
         context["plan_history"] = [{"revision": 1, "task_ids": context["task_ids"], "summary": plan.summary}]
         message = AgentMessage(mission_id=mission.id, sender="SHOGUN", recipient="CONTROLLER", type=MessageType.TASK_PROPOSAL,
                                summary=plan.summary, payload={"task_ids": [t.id for t in guild_tasks], "scope_version": mission.scope_version})
+        missing_tests = [c.description for c in plan.criteria if c.check_profile == "python_pytest" and not planned_selectors(c)]
+        if missing_tests and isinstance(self.executor, ContainerExecutor):
+            context["test_gaps"] = missing_tests
+            context["test_gap_proposals"] = [gap.model_dump(mode="json") for gap in plan.test_gaps
+                                             if gap.criterion_description in missing_tests]
+            for task in guild_tasks:
+                task.status = TaskStatus.BLOCKED
+            blocker = AgentMessage(mission_id=mission.id, sender="SHOGUN", recipient="USER", type=MessageType.BLOCKER,
+                                   summary="Acceptance tests are missing; review/add tests to the original repository and start a new mission.",
+                                   candidate_id=baseline.id, payload={"unmapped_criteria": missing_tests})
+            await self.store.commit(mission.id, token, status=MissionStatus.BLOCKED,
+                                    failure_reason="Acceptance tests missing for: " + "; ".join(missing_tests)[:350],
+                                    entities=[*planned_criteria, *guild_tasks, message, blocker], context=context,
+                                    budgets=mission.budgets, event="TEST_GAP_BLOCKED")
+            return
         await self.store.commit(mission.id, token, status=MissionStatus.READY_FOR_AUTHORIZATION,
                                 entities=[*planned_criteria, *guild_tasks, message], context=context,
                                 budgets=mission.budgets, event="PLAN_READY")
+        await self._activity(mission.id, "SHOGUN")({"stage": "proposal", "action": "submit_plan",
+            "summary": f"Shogun proposed {len(plan.tasks)} implementation tasks and {len(plan.criteria)} acceptance checks; awaiting user authorization.",
+            "task_count": len(plan.tasks)})
 
     def _evidence_context(self, evidence):
         data = evidence.model_dump(mode="json")
@@ -248,6 +294,9 @@ class GuildController:
             context["plan_revision"] = 1
             context["approved_criteria"] = context["plan"]["criteria"]
             context["plan_history"] = [{"revision": 1, "task_ids": context["task_ids"], "summary": context["plan"]["summary"]}]
+            await self.store.commit(mission.id, token, context=context)
+        if "challenge_enabled" not in context:
+            context["challenge_enabled"] = isinstance(self.executor, ContainerExecutor)
             await self.store.commit(mission.id, token, context=context)
         self._restore(context)
         candidates = await self.store.records(Candidate, mission.id)
@@ -296,7 +345,8 @@ class GuildController:
         if not findings:
             raise GuildConflict("No current blocking findings justify a repair")
         evidence = [e for e in await self.store.records(Evidence, mission.id) if e.candidate_id == candidate.id]
-        result = await RepairPlanner(adapter, self.workspaces, meter.before_tool).run(
+        result = await RepairPlanner(adapter, self.workspaces, meter.before_tool,
+                                     self._activity(mission.id, "SHOGUN", candidate_id=candidate.id)).run(
             mission.id, self.workspaces.get_candidate_dir(mission.id, candidate.id),
             {"request": mission.request_text, "criteria": context["approved_criteria"],
              "findings": [f.model_dump(mode="json") for f in findings],
@@ -338,6 +388,9 @@ class GuildController:
                                payload={"plan_revision": context["plan_revision"], "finding_ids": proposal.finding_ids, "task_ids": context["task_ids"]})
         await self.store.commit(mission.id, token, status=MissionStatus.RUNNING, entities=[*old_tasks, *tasks, *findings, message],
                                 context=context, event="PLAN_REVISED")
+        await self._activity(mission.id, "SHOGUN", candidate_id=candidate.id)({"stage": "proposal", "action": "revise_plan",
+            "summary": f"Shogun revised the task plan for {len(findings)} recorded findings; Samurai will work from this candidate.",
+            "finding_count": len(findings), "task_count": len(proposal.tasks)}, evidence_ids=message.evidence_ids)
         return True
 
     async def _run_pass(self, mission, token, context, parent, adapter, meter):
@@ -354,11 +407,15 @@ class GuildController:
                 raise BudgetExceeded("Guild model/tool budget exhausted")
             task.status = TaskStatus.RUNNING
             await self.store.commit(mission.id, token, entities=[task], event="SAMURAI_STARTED")
+            activity = self._activity(mission.id, "SAMURAI", task_id=task.id)
+            await activity({"stage": "intent", "action": "implement_task",
+                            "summary": f"Samurai is starting task: {safe_label(task.title, 140)}. Changes remain in a disposable workspace."})
             repair_findings = [f for f in await self.store.records(Finding, mission.id) if f.id in context["plan"].get("finding_ids", [])]
             request = json.dumps({"request": mission.request_text, "task": task.description, "criteria": context["plan"]["criteria"],
                                   "findings": [f.model_dump(mode="json") for f in repair_findings],
                                   "clarification_answers": await self._answers(mission.id)})
-            result = await SamuraiRunner(adapter, workspace_service=self.workspaces, before_tool=meter.before_tool, config=SamuraiConfig(
+            result = await SamuraiRunner(adapter, workspace_service=self.workspaces, before_tool=meter.before_tool,
+                                         on_activity=activity, config=SamuraiConfig(
                 max_turns=min(20, remaining_turns), max_tool_calls=min(50, remaining_tools),
             )).run(mission.repository_id, request, mission_id=mission.id, prepared_workspace=True, parent_candidate=parent)
             if not result.candidate:
@@ -387,6 +444,9 @@ class GuildController:
                 entities.append(AgentMessage(mission_id=mission.id, sender="SAMURAI", recipient=recipient, type=MessageType.HANDOFF,
                                              task_id=task.id, candidate_id=candidate.id, summary="Candidate frozen for checks and review", evidence_ids=[evidence.id]))
             await self.store.commit(mission.id, token, entities=entities, candidate_id=candidate.id, event="CANDIDATE_FROZEN")
+            await activity({"stage": "handoff", "action": "freeze_candidate",
+                            "summary": f"Samurai handed off {len(candidate.changed_files)} changed files for checks and review; correctness is not yet verified.",
+                            "candidate_fingerprint": candidate.content_fingerprint}, candidate.id, [evidence.id])
             parent = candidate
         check_task = next(t for t in tasks if t.owner_agent == "SENTINEL")
         review_task = next(t for t in tasks if t.owner_agent == "SHADOW_COUNCIL")
@@ -394,10 +454,11 @@ class GuildController:
             task.status = TaskStatus.RUNNING
             task.candidate_id = parent.id
         await self.store.commit(mission.id, token, status=MissionStatus.CHECKING, entities=[check_task, review_task], event="CHECK_AND_REVIEW_STARTED")
-        async with asyncio.TaskGroup() as group:
-            check_job = group.create_task(self._check(mission, token, parent, check_task, context, meter))
-            group.create_task(self._review(mission, token, parent, review_task, adapter, context, meter))
-        await self.route_findings(mission.id, token, parent, blocked=check_job.result().blocked)
+        check_result = await self._check(mission, token, parent, check_task, context, meter)
+        # Reviewer receives persisted test, security and challenge evidence so a
+        # survived variant can influence its critique of this exact candidate.
+        await self._review(mission, token, parent, review_task, adapter, context, meter)
+        await self.route_findings(mission.id, token, parent, blocked=check_result.blocked)
         return parent
 
     def _diff_evidence(self, candidate, repository_id):
@@ -408,24 +469,86 @@ class GuildController:
                         metadata={"changed_files": candidate.changed_files})
 
     async def _check(self, mission, token, candidate, task, context, meter):
-        profiles = {item["check_profile"] for item in context["plan"]["criteria"]}
-        result = await SentinelRunner(self.executor, self.workspaces, self.artifacts, meter.before_tool).run(candidate, profiles)
-        task.status = TaskStatus.BLOCKED if result.blocked else (TaskStatus.FAILED if result.findings else TaskStatus.DONE)
+        criteria = await self.db.get_criteria(mission.id)
+        profiles = {criterion_profile(item)[0] for item in criteria}
+        if isinstance(self.executor, ContainerExecutor):
+            profiles.add("python_bandit")
+        result = await SentinelRunner(self.executor, self.workspaces, self.artifacts, meter.before_tool,
+                                      self._activity(mission.id, "SENTINEL", task_id=task.id, candidate_id=candidate.id)).run(
+            candidate, profiles, criteria=criteria,
+            contract_hash=verification_contract_hash(self.workspaces.get_candidate_dir(mission.id, candidate.id), criteria))
+        if context.get("challenge_enabled") and not result.blocked and not any(
+                f.severity in {FindingSeverity.HIGH, FindingSeverity.BLOCKING} for f in result.findings) and all(
+                e.metadata.get("classification") in {"PASS", "STATIC_SCAN"} for e in result.evidence):
+            challenge, challenge_findings = await challenge_candidate(
+                candidate, self.workspaces.get_baseline_dir(mission.id),
+                self.workspaces.get_candidate_dir(mission.id, candidate.id), self.executor, self.artifacts,
+                before_tool=meter.before_tool)
+            self.workspaces.validate_candidate(candidate)
+            result.evidence.append(challenge)
+            result.findings.extend(challenge_findings)
+            if challenge.metadata["status"] == "INCONCLUSIVE":
+                result.blocked = True
+                result.findings.append(Finding(
+                    mission_id=mission.id, candidate_id=candidate.id, source_agent="SENTINEL",
+                    severity=FindingSeverity.BLOCKING, title="Challenge execution inconclusive",
+                    description="The candidate challenge could not be completed in its restricted container.",
+                    observed_behavior="At least one variant has no valid test outcome.",
+                    expected_behavior="A bounded challenge completes or explicitly reports not applicable.",
+                    evidence_ids=[challenge.id]))
+        task.status = TaskStatus.BLOCKED if result.blocked else (TaskStatus.FAILED if any(
+            f.severity in {FindingSeverity.HIGH, FindingSeverity.BLOCKING} for f in result.findings) else TaskStatus.DONE)
         task.evidence_ids = [e.id for e in result.evidence]
         task.result_summary = "Required checks recorded against frozen candidate"
         prior_evidence = {e.id: e for e in await self.store.records(Evidence, mission.id)}
-        passed = {e.metadata["check_profile"]: e for e in result.evidence if e.metadata["classification"] == "PASS"}
+        passed = {(e.metadata["check_profile"], e.metadata.get("test_selector")): e for e in result.evidence if e.metadata.get("classification") == "PASS"}
+        scan = next((e for e in result.evidence if e.metadata.get("check_profile") == "python_bandit"
+                     and e.metadata.get("classification") == "STATIC_SCAN"), None)
+        active_issues = {(item.get("test_id"), str(item.get("filename", "")).removeprefix("./").removeprefix("/workspace/"))
+                         for item in (scan.metadata["report"]["results"] if scan else [])}
         resolved = []
         for finding in await self.store.records(Finding, mission.id):
             if finding.source_agent != "SENTINEL" or finding.candidate_id == candidate.id or finding.status == FindingStatus.RESOLVED:
                 continue
-            profiles_for_finding = [prior_evidence[e].metadata.get("check_profile") for e in finding.evidence_ids if e in prior_evidence]
+            if scan and finding.title.startswith("Bandit "):
+                old_key = (finding.title.split(":", 1)[0].removeprefix("Bandit "), finding.file_path)
+                if old_key not in active_issues:
+                    finding.status = FindingStatus.RESOLVED
+                    finding.resolution_evidence_ids = [scan.id]
+                    resolved.append(finding)
+                continue
+            profiles_for_finding = [(prior_evidence[e].metadata.get("check_profile"), prior_evidence[e].metadata.get("test_selector")) for e in finding.evidence_ids if e in prior_evidence]
             if profiles_for_finding and all(profile in passed for profile in profiles_for_finding):
                 finding.status = FindingStatus.RESOLVED
                 finding.resolution_evidence_ids = [passed[profile].id for profile in profiles_for_finding]
                 resolved.append(finding)
         await self.store.commit(mission.id, token, entities=[*result.evidence, *result.findings, *resolved, task], event="SENTINEL_FINISHED")
+        for evidence in result.evidence:
+            if evidence.kind == EvidenceKind.MUTATION:
+                await self._activity(mission.id, "SENTINEL", task_id=task.id, candidate_id=candidate.id)({
+                    "stage": "outcome", "action": "challenge_candidate",
+                    "summary": f"Sentinel challenged {len(evidence.metadata['attempts'])} isolated variants; {sum(a['outcome'] == 'SURVIVED' for a in evidence.metadata['attempts'])} survived, {sum(a['outcome'] == 'DETECTED' for a in evidence.metadata['attempts'])} were detected."
+                }, evidence_ids=[evidence.id])
+            else:
+                await self._check_activity(mission.id, evidence, task.id)
         return result
+
+    async def _check_activity(self, mission_id, evidence, task_id=None):
+        classification = evidence.metadata.get("classification", "UNKNOWN")
+        mode = "controlled check" if evidence.metadata.get("controlled_evaluation") else "container check"
+        verdict = "passed" if classification == "PASS" else "did not pass"
+        label = "criterion test" if evidence.criterion_id else "baseline suite" if evidence.kind == EvidenceKind.BASELINE else "full check suite"
+        if evidence.kind == EvidenceKind.STATIC_SCAN and classification == "STATIC_SCAN":
+            issues = evidence.metadata.get("report", {}).get("results", [])
+            summary = (f"Sentinel Bandit scan completed with {len(issues)} security findings (exit {evidence.exit_code}); "
+                       "review severity and evidence separately from pytest outcomes.")
+        else:
+            summary = f"Sentinel {mode} for {label} {verdict} (exit {evidence.exit_code}, {classification}); evidence recorded."
+        await self._activity(mission_id, "SENTINEL", task_id=task_id, candidate_id=evidence.candidate_id)({
+            "stage": "outcome", "action": "run_check", "check_profile": evidence.metadata.get("check_profile"),
+            "test_selector": evidence.metadata.get("test_selector"), "criterion_id": evidence.criterion_id,
+            "summary": summary
+        }, evidence_ids=[evidence.id])
 
     async def _review(self, mission, token, candidate, task, adapter, context, meter):
         self.workspaces.validate_candidate(candidate)
@@ -436,7 +559,8 @@ class GuildController:
             raise BudgetExceeded("Review model/tool budget exhausted")
         prior = [f for f in await self.store.records(Finding, mission.id)
                  if f.source_agent == "SHADOW_COUNCIL" and f.candidate_id != candidate.id and f.status != FindingStatus.RESOLVED]
-        result = await ShadowCouncilRunner(adapter, self.workspaces, meter.before_tool).run(
+        result = await ShadowCouncilRunner(adapter, self.workspaces, meter.before_tool,
+                                           self._activity(mission.id, "SHADOW_COUNCIL", task_id=task.id, candidate_id=candidate.id)).run(
             mission.id, self.workspaces.get_candidate_dir(mission.id, candidate.id),
             {"request": mission.request_text, "criteria": context["plan"]["criteria"], "changed_files": candidate.changed_files,
              "evidence": [self._evidence_context(e) for e in evidence], "prior_findings": [f.model_dump(mode="json") for f in prior]},
@@ -466,6 +590,10 @@ class GuildController:
                               type=MessageType.TASK_RESULT, task_id=task.id, summary=result.proposal.summary,
                               evidence_ids=task.evidence_ids, payload={"finding_ids": [f.id for f in findings]})
         await self.store.commit(mission.id, token, entities=[review_evidence, *findings, *prior, task, report], event="REVIEW_FINISHED")
+        await self._activity(mission.id, "SHADOW_COUNCIL", task_id=task.id, candidate_id=candidate.id)({
+            "stage": "outcome", "action": "submit_review", "finding_count": len(findings),
+            "summary": f"Shadow Council submitted its candidate review with {len(findings)} findings; this is not human approval."
+        }, evidence_ids=[review_evidence.id])
 
     async def route_findings(self, mission_id, token, candidate, *, blocked=False):
         mission = await self.db.get_mission(mission_id)
@@ -504,6 +632,11 @@ class GuildController:
         await self.store.commit(mission_id, token, status=status, entities=entities, context=context,
                                 failure_reason="Check environment or timeout requires intervention" if blocked else None,
                                 event="FINDINGS_ROUTED" if findings else "READY_FOR_VERIFICATION")
+        await self._activity(mission_id, "CONTROLLER", candidate_id=candidate.id)({
+            "stage": "outcome", "action": "route_findings", "finding_count": len(findings),
+            "summary": (f"Controller routed {len(findings)} blocking findings to Shogun and Samurai for repair."
+                        if findings and not blocked else "Controller blocked execution because a check could not run safely."
+                        if blocked else "Checks and review completed; the candidate awaits independent verification.")})
 
 
 _controller = None

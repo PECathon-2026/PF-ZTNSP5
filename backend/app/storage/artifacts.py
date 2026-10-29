@@ -33,8 +33,7 @@ class ArtifactStorage:
         mission_dir = self.base_dir / mission_id
         mission_dir.mkdir(parents=True, exist_ok=True)
 
-        normalized_name = artifact_name.replace("/", "_").replace("\\", "_")
-        safe_filename = f"{artifact_id}_{normalized_name}"
+        safe_filename = f"{artifact_id}_{artifact_name.replace('/', '_').replace('\\', '_')}"
         file_path = mission_dir / safe_filename
 
         with open(file_path, "wb") as f:

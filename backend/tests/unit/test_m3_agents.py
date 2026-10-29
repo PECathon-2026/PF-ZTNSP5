@@ -291,6 +291,43 @@ def test_workspace_identifiers_and_same_role_lease(workspace):
 
 
 @pytest.mark.asyncio
+async def test_samurai_deletion_requires_prior_read_and_diff(workspace):
+    repo, repo_id, workspaces = workspace
+
+    def delete_after_read(body):
+        previous = json.loads(body["messages"][-1]["content"][0]["content"])
+        return [call("apply_patch", {"relative_path": "app.py", "expected_fingerprint": previous["fingerprint"],
+                                      "delete": True}, "delete")]
+
+    actions = [[call("read_file", {"relative_path": "app.py"}, "read")], delete_after_read,
+               [call("read_diff", {"relative_path": "app.py"}, "diff")],
+               [call("submit_candidate", {"summary": "Removed obsolete source"}, "submit")]]
+    async with scripted_adapter(actions) as adapter:
+        result = await SamuraiRunner(adapter, workspace_service=workspaces).run(repo_id, "Remove obsolete app.py")
+    assert result.status == "CANDIDATE_READY"
+    assert result.candidate.changed_files == ["app.py"]
+    assert not (workspaces.get_candidate_dir(result.mission_id, result.candidate.id) / "app.py").exists()
+    assert (repo / "app.py").read_text() == "value = 1\n"
+
+
+@pytest.mark.asyncio
+async def test_samurai_rejects_deleting_protected_test(workspace):
+    _, repo_id, workspaces = workspace
+
+    def delete_after_read(body):
+        previous = json.loads(body["messages"][-1]["content"][0]["content"])
+        return [call("apply_patch", {"relative_path": "test_app.py", "expected_fingerprint": previous["fingerprint"],
+                                      "delete": True}, "delete")]
+
+    actions = [[call("read_file", {"relative_path": "test_app.py"}, "read")], delete_after_read]
+    async with scripted_adapter(actions) as adapter:
+        result = await SamuraiRunner(adapter, workspace_service=workspaces,
+                                     config=SamuraiConfig(max_consecutive_errors=1)).run(repo_id, "Remove test")
+    assert result.status == "BLOCKED" and result.trace[-1].status == "ERROR"
+    assert (workspaces.get_mission_workspace_dir(result.mission_id) / "test_app.py").exists()
+
+
+@pytest.mark.asyncio
 async def test_network_retries_and_invalid_json_are_sanitized(caplog):
     attempts = 0
 

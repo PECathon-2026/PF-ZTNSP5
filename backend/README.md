@@ -1,5 +1,39 @@
 # DevPilot backend
 
+## Interactive CLI (no frontend server required)
+
+From `backend/`, after configuring `backend/.env` and building the restricted
+check image, run a mission against an **existing small Python repository**:
+
+```powershell
+python -m app.cli run --repo "D:/projects/task-service" --request "Add status filtering without changing sort order" --criterion "Active tasks can be filtered" --criterion "Existing sort order stays the same"
+```
+
+Missing flags are prompted for interactively. The CLI displays real, replayable
+Shogun/Samurai/Sentinel/Shadow Council activity, check outcomes and findings.
+Review its proposed tasks and criterion-to-test mappings; **type `AUTHORIZE`**
+to let agents change only the disposable workspace. It then runs independent
+verification, displays the exact candidate diff/fingerprint and **stops before
+human approval**. Use bounded `--max-model-turns 60 --max-tool-calls 100` for
+larger small-repository demonstrations; the normal defaults are 25/50.
+
+```powershell
+python -m app.cli list
+python -m app.cli watch miss-... --after 0  # replay committed events; --follow watches an active mission
+python -m app.cli resume miss-...           # plan authorization or clarification after a pause
+python -m app.cli proof miss-... --format markdown
+python -m app.cli approve miss-...          # review diff, type full SHA-256, then separately type APPLY SHA-256
+```
+
+`watch`/`proof` never run agents or approve patches. An aborted approval prompt
+does nothing. A recorded approval without the second `APPLY ...` confirmation
+leaves the original repository unchanged. CLI and HTTP use the same SQLite
+mission/evidence store and candidate fingerprints. Run a **single mission worker**
+at a time; don't run an active API mission and CLI mission on the same database
+concurrently. Container checks never fall back to host execution. An interrupted
+in-process write remains interrupted; use a fresh mission rather than blindly
+replaying tool calls.
+
 ## Run
 
 From `backend/`, install `requirements.txt`, copy `.env.example` to `.env`, configure
@@ -248,6 +282,22 @@ Infrastructure failures/timeouts remain `BLOCKED`, rather than launching code ed
 when the implementation DAG changes. Durable plan history is stored in the guild
 context, and `PLAN_REVISED`/repair/clarification events are recorded for later SSE use.
 
+### User-facing agent activity
+
+The same persisted mission event stream now includes `AGENT_ACTIVITY` records for
+Shogun, Samurai, Sentinel and Shadow Council. Each event has a trusted source,
+monotonic sequence number and bounded `display_payload` with `stage` (`intent`,
+`outcome`, `failed`, `proposal` or `handoff`), `action` and a plain-language
+`summary`. File paths are validated relative paths, never hardcoded example names.
+Intent describes a proposed step; outcome is emitted after the tool completes.
+Failed calls never produce a successful outcome. Sentinel check outcomes link
+the frozen candidate and persisted evidence IDs; only the independent verifier
+can report a verified acceptance decision. Review findings include severity and
+evidence references. The stream excludes raw model thoughts, file contents,
+diff bodies, command output and model credentials. SSE replay uses the same
+durable events after reconnection; Dojo renders their summaries as an activity
+timeline. Existing phase/status events remain available for compatibility.
+
 ### Clarification pause/resume
 
 Shogun may call `request_clarification` during initial planning or repair planning.
@@ -326,7 +376,17 @@ See [M5_STATUS.md](M5_STATUS.md) for current results and artifact paths.
 
 When a mission reaches `VERIFYING`, call `POST /api/missions/{id}/verify`.
 The independent deterministic verifier evaluates the current frozen candidate's
-check evidence, criteria, and blocking findings. Only a passing result enters
+structured check evidence, criteria, and blocking findings. For each behavioral
+criterion, Shogun proposes one or more **existing pytest node IDs**, such as
+`test_tasks.py::test_filter`, in the plan's `test_selectors`. Tests can support
+several criteria. Mapping is visible in `GET /api/missions/{id}` before scope
+authorization. Sentinel runs the entire suite **and** approved selected tests
+on the frozen candidate; evidence stores criterion ID, selector, command,
+candidate fingerprint, JSON report artifact/hash and versioned contract hash.
+Missing, malformed, stale or skipped-only reports fail closed. A passing test
+demonstrates its approved test, not a formal proof that natural-language
+requirements are fully covered. Older plans without accepted mappings require
+a new mission/plan to verify. Only a passing result enters
 `VERIFIED_AWAITING_APPROVAL`; a failed check enters `FAILED_VERIFICATION`.
 
 Review `GET /api/missions/{id}/candidates/{candidate_id}/diff`,
@@ -340,9 +400,15 @@ human decision, send `POST /api/missions/{id}/approve` with:
 An explicit `REJECTED` decision closes the mission without applying changes.
 After approval, send `POST /api/missions/{id}/apply` with the candidate ID.
 Application verifies the original repository's approved manifest/content and
-the approved candidate snapshot before replacing the changed file atomically.
-This M6 application supports **one existing regular file**; multi-file edits
-require patch export and manual review rather than unsafe partial application.
+the approved candidate snapshot before writing. Multi-file edits, new files and
+deletions are supported. A durable journal stores all original and new file bytes
+before the first mutation; each file is replaced atomically. If a write or database
+finalization fails, rollback restores the original files. On backend startup,
+`APPLYING` operations are inspected and rolled back before serving requests; if
+journal integrity or external edits prevent safe rollback, the mission is blocked
+and its journal retained for inspection. Multi-file visibility is **not globally
+atomic to external readers** during the short apply window. Protected tests and
+symlinked paths cannot be applied.
 Conflicts, stale decisions, and duplicate attempts return HTTP 409. Verification
 or approval alone never mutates the original repository. See
 [M6_STATUS.md](M6_STATUS.md) for checks and known limits.
@@ -356,3 +422,16 @@ operations. Synthetic checks are tagged and cannot pass independent verification
 Docker checks, blocks safely if Docker is unavailable, and never applies changes.
 Both write separate per-run JSON evidence under `evaluation/results/`. See
 [M8_STATUS.md](M8_STATUS.md) and [evaluation/README.md](../evaluation/README.md).
+
+## Evidence-first improvements
+
+The check image includes pinned `pytest-json-report` and Bandit, both run only
+inside restricted containers. A bounded Python AST repository map supports
+source/test discovery. The controller challenges eligible changed functions
+with up to three isolated AST variants after checks pass; detection/survival is
+recorded separately from code failure. `GET /api/missions/{id}/proof` exports
+a bounded JSON/Markdown proof card, including causal finding-to-task links.
+Without accepted tests a real mission blocks **before authorization** and
+proposes a test gap for human review; automatically writing new test assertions
+into the same mission is not implemented. See [INNOVATION_STATUS.md](INNOVATION_STATUS.md)
+for current live evidence, limitations and attribution.
