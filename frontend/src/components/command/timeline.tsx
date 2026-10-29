@@ -15,11 +15,11 @@ function payloadLines(payload: Record<string, unknown>): string[] {
 }
 
 export function Timeline({ events }: TimelineProps) {
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
 
   useEffect(() => {
-    if (stickToBottom.current) endRef.current?.scrollIntoView({ block: "nearest" });
+    if (stickToBottom.current && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [events.events.length]);
 
   return (
@@ -33,7 +33,7 @@ export function Timeline({ events }: TimelineProps) {
           data-tone={events.phase === "live" ? "jade" : events.phase === "error" ? "warn" : "info"}
           role="status"
         >
-          {events.phase === "live" ? "◉ LIVE · POLLING 3S" : events.phase === "error" ? "⚠ RECONNECTING" : "… CONNECTING"}
+          {events.phase === "live" ? "◉ LIVE · SSE" : events.phase === "error" ? "⚠ RECONNECTING" : "… CONNECTING"}
         </span>
       </div>
 
@@ -44,6 +44,7 @@ export function Timeline({ events }: TimelineProps) {
       )}
 
       <div
+        ref={scrollRef}
         className="timeline__scroll"
         onScroll={(event) => {
           const el = event.currentTarget;
@@ -89,7 +90,6 @@ export function Timeline({ events }: TimelineProps) {
             ))}
           </ol>
         )}
-        <div ref={endRef} />
       </div>
     </section>
   );

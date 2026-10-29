@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { addCriterion } from "@/lib/mission-draft";
 import { preflightMeta } from "@/lib/status";
@@ -15,9 +15,12 @@ const SAMPLE_REQUESTS = [
 type MissionBriefProps = {
   connected: StoredRepository | null;
   onStarted: (missionId: string) => void;
+  phase?: "brief" | "review";
+  onDraftChange?: (draft: BriefDraft) => void;
 };
+export type BriefDraft = { request: string; criteria: string[]; ready: boolean };
 
-export function MissionBrief({ connected, onStarted }: MissionBriefProps) {
+export function MissionBrief({ connected, onStarted, phase, onDraftChange }: MissionBriefProps) {
   const [request, setRequest] = useState("");
   const [criteria, setCriteria] = useState<string[]>([]);
   const [entry, setEntry] = useState("");
@@ -35,6 +38,7 @@ export function MissionBrief({ connected, onStarted }: MissionBriefProps) {
     if (executionBlocked && !acknowledged) return false;
     return true;
   }, [connected, submitting, request, executionBlocked, acknowledged]);
+  useEffect(() => { onDraftChange?.({ request, criteria, ready: canSubmit }); }, [request, criteria, canSubmit, onDraftChange]);
 
   function addCriterionToList() {
     const result = addCriterion(criteria, entry);
@@ -71,13 +75,14 @@ export function MissionBrief({ connected, onStarted }: MissionBriefProps) {
   }
 
   return (
-    <section className="panel setup-panel" aria-labelledby="brief-title">
+    <section className="panel setup-panel" aria-labelledby={phase === "review" ? "commission-review-title" : "brief-title"}>
       <div className="panel-head">
         <span className="panel-title">02 · INTENT</span>
         <span className="panel-title">{criteria.length} CRITERIA</span>
       </div>
 
       <div className="setup-panel__body">
+        <div hidden={phase === "review"} className="briefing-fields">
         <h2 id="brief-title">The mission brief</h2>
         <p className="muted">
           Write the change you want and the outcomes you will review. The Shogun reads this first —
@@ -181,10 +186,16 @@ export function MissionBrief({ connected, onStarted }: MissionBriefProps) {
           </ul>
         )}
 
-        <div className="preflight" aria-labelledby="preflight-title">
+        </div>
+        {phase === "review" && <div className="commission-review"><span className="mono">THE FINAL BRIEF</span><h2 id="commission-review-title">Review the commission</h2><p className="commission-review-intro">This is the exact brief the backend will record. Execution and application require their own authorization later.</p>
+          <div className="commission-review-block"><h3>Repository</h3><p className="mono">{connected?.name ?? "No repository connected"}</p><small>{connected?.path}</small></div>
+          <div className="commission-review-block"><h3>Mission intention</h3><p className="commission-review-request">{request.trim() || "No mission brief written yet."}</p></div>
+          <div className="commission-review-block"><h3>Acceptance gate · {criteria.length} criteria</h3>{criteria.length ? <ol>{criteria.map((criterion) => <li key={criterion}>{criterion}</li>)}</ol> : <p>No criteria added. The planner may propose criteria during planning.</p>}</div>
+        </div>}
+        <div className="preflight" hidden={phase === "brief"} aria-labelledby="preflight-title">
           <div className="preflight__summary">
             <p className="panel-title" id="preflight-title">
-              03 · AUTHORIZATION
+              03 · RECORDING READINESS
             </p>
             {preflight ? (
               <>

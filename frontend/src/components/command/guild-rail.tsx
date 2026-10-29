@@ -29,7 +29,7 @@ export function GuildRail({ tasks, status }: GuildRailProps) {
               </span>
               <div className="guild-rail__body">
                 <p className="guild-rail__name">
-                  {member.name}
+                  {member.name}{" "}
                   <span className="guild-rail__role">{member.role}</span>
                 </p>
                 <p className="guild-rail__count mono">

@@ -23,8 +23,7 @@ export function SiteHeader() {
     : [];
 
   function isCurrent(href: string): boolean {
-    if (href === "/missions") return pathname === "/missions";
-    return pathname === href || pathname.startsWith(`${href}/`);
+    return pathname === href;
   }
 
   return (

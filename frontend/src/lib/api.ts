@@ -1,11 +1,14 @@
 import type {
+  ApprovalDecision,
   CandidateDiffResponse,
+  Clarification,
+  EvidenceDetail,
   FileContentResponse,
   HealthResponse,
   MissionDetail,
   Mission,
-  MissionEvent,
   MissionReport,
+  PatchExport,
   RepositoryConnectResponse,
 } from "./types";
 
@@ -123,12 +126,6 @@ export const api = {
   missionReport: (missionId: string, signal?: AbortSignal) =>
     request<MissionReport>(`/api/missions/${encodeURIComponent(missionId)}/report`, { signal }),
 
-  missionEvents: (missionId: string, after = 0, signal?: AbortSignal) =>
-    request<MissionEvent[]>(
-      `/api/missions/${encodeURIComponent(missionId)}/events?after=${encodeURIComponent(String(after))}`,
-      { signal, timeoutMs: 8000 },
-    ),
-
   connectRepository: (path: string, signal?: AbortSignal) =>
     request<RepositoryConnectResponse>("/api/repositories/connect", {
       method: "POST",
@@ -157,4 +154,87 @@ export const api = {
       `/api/missions/${encodeURIComponent(missionId)}/candidates/${encodeURIComponent(candidateId)}/diff?repository_id=${encodeURIComponent(repositoryId)}`,
       { signal },
     ),
+
+  planMission: (missionId: string) =>
+    request<MissionDetail>(`/api/missions/${encodeURIComponent(missionId)}/plan`, {
+      method: "POST",
+      timeoutMs: 30000,
+    }),
+
+  authorizeMission: (missionId: string, input: { scope_version: number; auto_repair: boolean }) =>
+    request<MissionDetail>(`/api/missions/${encodeURIComponent(missionId)}/authorize`, {
+      method: "POST",
+      body: input,
+      timeoutMs: 30000,
+    }),
+
+  answerClarification: (
+    missionId: string,
+    input: { question_id: string; answer: string },
+  ) =>
+    request<MissionDetail>(`/api/missions/${encodeURIComponent(missionId)}/clarifications`, {
+      method: "POST",
+      body: input,
+      timeoutMs: 30000,
+    }),
+
+  verifyMission: (missionId: string) =>
+    request<MissionDetail>(`/api/missions/${encodeURIComponent(missionId)}/verify`, {
+      method: "POST",
+      timeoutMs: 60000,
+    }),
+
+  approveCandidate: (
+    missionId: string,
+    input: { candidate_id: string; candidate_fingerprint: string; decision: ApprovalDecision },
+  ) =>
+    request<MissionDetail>(`/api/missions/${encodeURIComponent(missionId)}/approve`, {
+      method: "POST",
+      body: input,
+      timeoutMs: 30000,
+    }),
+
+  applyCandidate: (missionId: string, candidateId: string) =>
+    request<MissionDetail>(`/api/missions/${encodeURIComponent(missionId)}/apply`, {
+      method: "POST",
+      body: { candidate_id: candidateId },
+      timeoutMs: 60000,
+    }),
+
+  evidenceDetail: (missionId: string, evidenceId: string, signal?: AbortSignal) =>
+    request<EvidenceDetail>(
+      `/api/missions/${encodeURIComponent(missionId)}/evidence/${encodeURIComponent(evidenceId)}`,
+      { signal },
+    ),
+
+  missionPatch: async (missionId: string): Promise<PatchExport> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+    try {
+      const response = await fetch(`/api/missions/${encodeURIComponent(missionId)}/patch`, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        throw new ApiError(response.status, body.trim() || `Patch export failed with status ${response.status}`);
+      }
+      const disposition = response.headers.get("content-disposition") ?? "";
+      const match = /filename="?([^";]+)"?/i.exec(disposition);
+      return { filename: match?.[1] ?? `${missionId}.patch`, text: await response.text() };
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new ApiError(0, "The patch export timed out before the backend responded.");
+      }
+      throw new ApiError(0, "The patch could not be exported. Check that the backend is running.");
+    } finally {
+      clearTimeout(timer);
+    }
+  },
+
+  clarifications: async (missionId: string, signal?: AbortSignal): Promise<Clarification[]> => {
+    const detail = await api.getMission(missionId, signal);
+    return detail.clarifications;
+  },
 };

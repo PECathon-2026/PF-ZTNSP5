@@ -12,7 +12,7 @@ export const GUILD = [
     id: "SAMURAI",
     name: "SAMURAI",
     role: "Developer",
-    glyph: "／",
+    glyph: "/",
     purpose: "Implements and repairs the change inside an isolated workspace, then freezes it as a candidate.",
   },
   {

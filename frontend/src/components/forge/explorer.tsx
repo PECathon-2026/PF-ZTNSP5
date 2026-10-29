@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { buildTree, type TreeNode } from "@/lib/tree";
 import { fileGlyph } from "@/lib/status";
+import { Search } from "lucide-react";
 
 type ExplorerProps = {
   paths: string[];
@@ -10,16 +11,19 @@ type ExplorerProps = {
   onOpen: (path: string) => void;
   error: string | null;
   onRetry: () => void;
+  activePath?: string | null;
+  changedFiles?: string[];
 };
 
-export function Explorer({ paths, repositoryHint, onOpen, error, onRetry }: ExplorerProps) {
+export function Explorer({ paths, repositoryHint, onOpen, error, onRetry, activePath, changedFiles = [] }: ExplorerProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const tree = useMemo(() => buildTree(paths), [paths]);
+  const [query, setQuery] = useState("");
+  const tree = useMemo(() => buildTree(paths.filter((path) => path.toLowerCase().includes(query.toLowerCase()))), [paths, query]);
 
   function render(node: TreeNode): React.ReactNode {
     if (node.file) {
       return (
-        <li key={node.path} className="forge-tree__file">
+        <li key={node.path} className={`forge-tree__file${activePath === node.path ? " is-active" : ""}`}>
           <span className="forge-tree__glyph" aria-hidden="true">
             {fileGlyph(node.path)}
           </span>
@@ -27,14 +31,16 @@ export function Explorer({ paths, repositoryHint, onOpen, error, onRetry }: Expl
             type="button"
             className="forge-tree__name"
             title={node.path}
+            aria-current={activePath === node.path ? "true" : undefined}
             onClick={() => onOpen(node.path)}
           >
             {node.name}
           </button>
+          {changedFiles.includes(node.path) && <span className="forge-file-modified" aria-label="Changed in candidate">M</span>}
         </li>
       );
     }
-    const open = expanded[node.path] ?? false;
+    const open = expanded[node.path] ?? Boolean(query || (activePath && activePath.startsWith(`${node.path}/`)));
     return (
       <li key={node.path} className="forge-tree__dir">
         <button
@@ -73,16 +79,17 @@ export function Explorer({ paths, repositoryHint, onOpen, error, onRetry }: Expl
           <h3 style={{ margin: "0 0 0.3rem", fontSize: "var(--text-xs)" }}>Repository unavailable</h3>
           <p style={{ margin: 0, fontSize: "var(--text-xs)" }}>{error}</p>
           <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: "0.4rem" }} onClick={onRetry}>
-            Reconnect repository
+            Retry repository
           </button>
         </div>
       )}
       <div className="forge-explorer__hint mono" title={repositoryHint ?? ""}>
         {repositoryHint ?? "No repository bound to this mission."}
       </div>
+      <label className="explorer-search"><Search size={13} /><input aria-label="Filter repository files" placeholder="Filter files…" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
       <div className="forge-tree__scroll" role="region" aria-label="Repository files">
         <ul className="forge-tree__list">        {tree.children.map((child: TreeNode) => render(child))}</ul>
-        {tree.children.length === 0 && !error && <p className="forge-tree__empty">No files exposed by preflight.</p>}
+        {tree.children.length === 0 && !error && <p className="forge-tree__empty">{query ? `No files match “${query}”.` : "No files exposed by preflight."}</p>}
       </div>
     </section>
   );

@@ -90,6 +90,7 @@
 
 .stage-rail li {
   flex: 1;
+  min-height: 65px;
   padding-top: 0.8rem;
   position: relative;
 }
@@ -106,12 +107,12 @@
   background: var(--color-panel-deep);
 }
 
-.stage-rail[data-state="current"] .stage-rail__dot {
+.stage-rail li[data-state="current"] .stage-rail__dot {
   background: var(--color-gold);
   box-shadow: 0 0 0 2px var(--color-panel-deep);
 }
 
-.stage-rail[data-state="done"] .stage-rail__dot {
+.stage-rail li[data-state="done"] .stage-rail__dot {
   background: var(--color-gold);
 }
 
@@ -127,12 +128,12 @@
   text-transform: uppercase;
 }
 
-.stage-rail[data-state="current"] .stage-rail__label {
+.stage-rail li[data-state="current"] .stage-rail__label {
   color: var(--color-text);
   text-transform: uppercase;
 }
 
-.stage-rail[data-state="done"] .stage-rail__label {
+.stage-rail li[data-state="done"] .stage-rail__label {
   color: var(--color-gold);
 }
 
@@ -146,7 +147,7 @@
   line-height: 1.4;
   width: 150px;
   text-align: center;
-  opacity: 0.75;
+  opacity: 1;
 }
 
 .command-gate {

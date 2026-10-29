@@ -42,9 +42,18 @@ export function MissionInspector({ mission, criteria, tasks }: MissionInspectorP
             role="tab"
             id={`inspector-tab-${entry.key}`}
             aria-selected={tab === entry.key}
+            tabIndex={tab === entry.key ? 0 : -1}
             aria-controls={`inspector-panel-${entry.key}`}
             className="tab"
             onClick={() => setTab(entry.key)}
+            onKeyDown={(event) => {
+              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+              event.preventDefault();
+              const index = TAB_LABELS.findIndex((item) => item.key === tab);
+              const next = event.key === "Home" ? 0 : event.key === "End" ? TAB_LABELS.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + TAB_LABELS.length) % TAB_LABELS.length;
+              setTab(TAB_LABELS[next].key);
+              document.getElementById(`inspector-tab-${TAB_LABELS[next].key}`)?.focus();
+            }}
           >
             {entry.label} 
             <span className="tab-count mono">

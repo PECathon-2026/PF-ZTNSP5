@@ -48,10 +48,16 @@ export type MissionBudgets = {
   max_repair_rounds: number;
   repair_rounds_used: number;
   max_time_seconds: number;
+  time_used_seconds: number;
   max_tool_calls: number;
   tool_calls_used: number;
   max_model_turns: number;
   model_turns_used: number;
+  max_tokens: number;
+  input_tokens_used: number;
+  output_tokens_used: number;
+  max_clarifications: number;
+  clarifications_used: number;
 };
 
 export type Mission = {
@@ -125,14 +131,16 @@ export type Candidate = {
   created_at: string;
 };
 
+export type EvidenceKind = "TEST" | "BUILD" | "LINT" | "STATIC_SCAN" | "DIFF" | "REVIEW_FINDING" | "BASELINE";
+
 export type Evidence = {
   id: string;
   mission_id: string;
   candidate_id: string;
   criterion_id: string | null;
-  kind: string;
+  kind: EvidenceKind;
   source: string;
-  command: unknown;
+  command: string[];
   exit_code: number | null;
   duration_ms: number;
   stdout_artifact_id: string | null;
@@ -142,11 +150,16 @@ export type Evidence = {
   created_at: string;
 };
 
+export type EvidenceDetail = Evidence & { stdout: string; stderr: string };
+
+export type FindingSeverity = "INFO" | "LOW" | "MEDIUM" | "HIGH" | "BLOCKING";
+export type FindingStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "ACCEPTED_WITH_RISK" | "REJECTED";
+
 export type Finding = {
   id: string;
   mission_id: string;
   source_agent: string;
-  severity: string;
+  severity: FindingSeverity;
   title: string;
   description: string;
   file_path: string | null;
@@ -156,10 +169,52 @@ export type Finding = {
   expected_behavior: string;
   evidence_ids: string[];
   candidate_id: string | null;
-  status: string;
+  status: FindingStatus;
   resolution_evidence_ids: string[];
   created_at: string;
 };
+
+export type MessageType =
+  | "TASK_PROPOSAL"
+  | "TASK_RESULT"
+  | "FINDING"
+  | "CLARIFICATION"
+  | "CHECK_REQUEST"
+  | "BLOCKER"
+  | "HANDOFF";
+
+export type AgentMessage = {
+  id: string;
+  mission_id: string;
+  sender: string;
+  recipient: string;
+  type: MessageType;
+  task_id: string | null;
+  candidate_id: string | null;
+  summary: string;
+  payload: Record<string, unknown>;
+  evidence_ids: string[];
+  created_at: string;
+};
+
+export type ClarificationStatus = "OPEN" | "ANSWERED";
+
+export type Clarification = {
+  id: string;
+  mission_id: string;
+  question: string;
+  reason: string;
+  phase: "plan" | "repair";
+  candidate_id: string;
+  candidate_fingerprint: string;
+  scope_version: number;
+  status: ClarificationStatus;
+  answer: string | null;
+  created_at: string;
+  answered_at: string | null;
+};
+
+export type ApprovalDecision = "APPROVED" | "REJECTED";
 
 export type Approval = {
   id: string;
@@ -167,7 +222,7 @@ export type Approval = {
   candidate_id: string;
   candidate_fingerprint: string;
   intended_action: string;
-  decision: string;
+  decision: ApprovalDecision;
   decided_at: string;
   application_result_id: string | null;
 };
@@ -176,13 +231,29 @@ export type MissionDetail = {
   mission: Mission;
   criteria: AcceptanceCriterion[];
   tasks: MissionTask[];
+  candidates: Candidate[];
+  evidence: Evidence[];
+  findings: Finding[];
+  messages: AgentMessage[];
+  clarifications: Clarification[];
+  plan_revision: number;
+  approvals: Approval[];
+  repository_files: string[];
 };
 
-export type MissionReport = MissionDetail & {
-  events: MissionEvent[];
-  candidates: Candidate[];
-  findings: Finding[];
+export type PlanHistoryEntry = {
+  revision: number;
+  task_ids: string[];
+  summary: string;
+};
+
+export type MissionReport = {
+  mission: Mission;
+  candidate: Candidate | null;
+  criteria: AcceptanceCriterion[];
+  plan_history: PlanHistoryEntry[];
   evidence: Evidence[];
+  findings: Finding[];
   approvals: Approval[];
 };
 
@@ -201,7 +272,7 @@ export type FileContentResponse = {
 
 export type CandidateDiffFile = {
   file_path: string;
-  change_type: "ADDED" | "MODIFIED" | "DELETED";
+  change_type: string;
   diff: string;
 };
 
@@ -220,4 +291,9 @@ export type StoredRepository = {
   fingerprint: string;
   preflight: PreflightResult;
   connected_at: number;
+};
+
+export type PatchExport = {
+  filename: string;
+  text: string;
 };

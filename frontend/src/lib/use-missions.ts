@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "./api";
-import type { Mission, MissionEvent, MissionTask, AcceptanceCriterion, MissionReport, MissionStatus } from "./types";
+import type { Mission, MissionDetail, MissionEvent, MissionTask, AcceptanceCriterion, MissionReport, MissionStatus } from "./types";
 
 export type MissionsState = {
   missions: Mission[];
@@ -12,7 +12,6 @@ export type MissionsState = {
 };
 
 const MISSION_POLL_MS = 4000;
-const EVENTS_POLL_MS = 3000;
 
 export function useMissions(): MissionsState {
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -48,6 +47,7 @@ export function useMissions(): MissionsState {
 }
 
 export type MissionDetailState = {
+  detail: MissionDetail | null;
   mission: Mission | null;
   criteria: AcceptanceCriterion[];
   tasks: MissionTask[];
@@ -58,6 +58,7 @@ export type MissionDetailState = {
 };
 
 export function useMissionDetail(missionId: string): MissionDetailState {
+  const [detail, setDetail] = useState<MissionDetail | null>(null);
   const [mission, setMission] = useState<Mission | null>(null);
   const [criteria, setCriteria] = useState<AcceptanceCriterion[]>([]);
   const [tasks, setTasks] = useState<MissionTask[]>([]);
@@ -76,6 +77,7 @@ export function useMissionDetail(missionId: string): MissionDetailState {
       try {
         const detail = await api.getMission(missionId, controller.signal);
         if (cancelled) return;
+        setDetail(detail);
         setMission(detail.mission);
         setCriteria(detail.criteria ?? []);
         setTasks(detail.tasks ?? []);
@@ -107,7 +109,7 @@ export function useMissionDetail(missionId: string): MissionDetailState {
     };
   }, [missionId, attempt]);
 
-  return { mission, criteria, tasks, loading, notFound, error, reload };
+  return { detail, mission, criteria, tasks, loading, notFound, error, reload };
 }
 
 export type MissionEventsState = {
@@ -117,61 +119,67 @@ export type MissionEventsState = {
   lastSequence: number;
 };
 
-export function useMissionEvents(missionId: string, enabled = true): MissionEventsState {
+export function useMissionEvents(missionId: string, enabled = true, onEvent?: () => void): MissionEventsState {
   const [events, setEvents] = useState<MissionEvent[]>([]);
   const [phase, setPhase] = useState<MissionEventsState["phase"]>("connecting");
   const [error, setError] = useState<string | null>(null);
-  const cursor = useRef(0);
+  const callback = useRef(onEvent);
+  useEffect(() => { callback.current = onEvent; }, [onEvent]);
 
   useEffect(() => {
     if (!enabled) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let failureStreak = 0;
-
-    async function tick() {
-      const controller = new AbortController();
+    setEvents([]);
+    setPhase("connecting");
+    setError(null);
+    let cursor = 0;
+    let reconcile: ReturnType<typeof setTimeout> | undefined;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let stream: EventSource | null = null;
+    let disposed = false;
+    let failures = 0;
+    const receive = (message: MessageEvent<string>) => {
       try {
-        const batch = await api.missionEvents(missionId, cursor.current, controller.signal);
-        if (cancelled) return;
-        if (batch.length > 0) {
-          cursor.current = Math.max(...batch.map((event) => event.sequence), cursor.current);
-          setEvents((previous) => {
-            const seen = new Set(previous.map((event) => event.sequence));
-            const merged = previous.concat(batch.filter((event) => !seen.has(event.sequence)));
-            merged.sort((a, b) => a.sequence - b.sequence);
-            return merged;
-          });
-        } else {
-          setEvents((previous) => {
-            if (previous.length === 0 && cursor.current === 0) return previous;
-            return previous;
-          });
+        const incoming = JSON.parse(message.data) as Partial<MissionEvent>;
+        if (incoming.mission_id !== missionId || !Number.isSafeInteger(incoming.sequence) ||
+            !incoming.sequence || incoming.sequence <= cursor || typeof incoming.event_type !== "string") return;
+        cursor = incoming.sequence;
+        failures = 0;
+        const event: MissionEvent = {
+          sequence: cursor, mission_id: missionId, event_type: incoming.event_type,
+          source: incoming.source ?? "CONTROLLER", task_id: incoming.task_id ?? null,
+          candidate_id: incoming.candidate_id ?? null, evidence_ids: incoming.evidence_ids ?? [],
+          display_payload: incoming.display_payload ?? {}, created_at: incoming.created_at ?? "",
+        };
+        setEvents((previous) => [...previous, event]);
+        if (!reconcile) {
+          reconcile = setTimeout(() => { reconcile = undefined; callback.current?.(); }, 250);
         }
-        failureStreak = 0;
-        setPhase("live");
-        setError(null);
-      } catch (caught) {
-        if (cancelled) return;
-        failureStreak += 1;
-        if (failureStreak >= 2) {
-          setPhase("error");
-          setError(
-            caught instanceof ApiError
-              ? caught.detail
-              : "The event stream could not be read. The mission view keeps polling.",
-          );
-        }
-      } finally {
-        if (!cancelled) timer = setTimeout(tick, EVENTS_POLL_MS);
+      } catch {
+        setError("An event could not be decoded. Mission details continue to refresh.");
       }
-      controller.abort();
+    };
+    function connect() {
+      if (disposed) return;
+      // Reopen explicitly at the last accepted sequence, including across proxy disconnects.
+      const connection = new EventSource(`/api/missions/${encodeURIComponent(missionId)}/events?after=${cursor}`);
+      stream = connection;
+      connection.onopen = () => { setPhase("live"); setError(null); };
+      connection.addEventListener("mission", receive);
+      connection.onerror = () => {
+        connection.close(); connection.removeEventListener("mission", receive);
+        if (disposed) return;
+        setPhase("error");
+        setError("Event connection interrupted. Reconnecting with replay; mission details keep refreshing.");
+        retry = setTimeout(connect, Math.min(1000 * 2 ** failures++, 10000));
+      };
     }
-
-    void tick();
+    connect();
     return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
+      disposed = true;
+      stream?.removeEventListener("mission", receive);
+      stream?.close();
+      if (retry) clearTimeout(retry);
+      if (reconcile) clearTimeout(reconcile);
     };
   }, [missionId, enabled]);
 
