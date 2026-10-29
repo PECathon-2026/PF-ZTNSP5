@@ -1,0 +1,80 @@
+{
+  "scenario": "security",
+  "mode": "live",
+  "recorded_at": "2026-10-29T19:57:33.857934+00:00",
+  "status": "AWAITING_CLARIFICATION",
+  "failure_reason": null,
+  "original_unchanged": true,
+  "request": "Remove unsanitized shell execution and use an allowlisted, shell-free subprocess call.",
+  "checks": [],
+  "candidate_chain": [
+    {
+      "id": "cand-680285189b594bb8",
+      "fingerprint": "207ada05d7f5c39560d94fefd1113f245920d4fe6fd8b0addc99f78eca24436f",
+      "parent": null,
+      "changed_files": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-bbcbe17c",
+      "candidate_id": "cand-680285189b594bb8",
+      "fingerprint": "207ada05d7f5c39560d94fefd1113f245920d4fe6fd8b0addc99f78eca24436f",
+      "kind": "BASELINE",
+      "exit_code": 1,
+      "classification": "BASELINE_DEFECT",
+      "controlled_evaluation": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-5e640b92",
+      "candidate_id": "cand-680285189b594bb8",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "OPEN",
+      "evidence_ids": [
+        "ev-bbcbe17c"
+      ],
+      "resolution_evidence_ids": []
+    }
+  ],
+  "messages": [
+    {
+      "type": "CLARIFICATION",
+      "sender": "SHOGUN",
+      "recipient": "USER",
+      "candidate_id": "cand-680285189b594bb8"
+    },
+    {
+      "type": "CLARIFICATION",
+      "sender": "USER",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-680285189b594bb8"
+    },
+    {
+      "type": "CLARIFICATION",
+      "sender": "SHOGUN",
+      "recipient": "USER",
+      "candidate_id": "cand-680285189b594bb8"
+    }
+  ],
+  "clarifications": [
+    {
+      "id": "question-fe2102155ffd42c1",
+      "status": "ANSWERED",
+      "phase": "plan"
+    },
+    {
+      "id": "question-2723b73990a54f11",
+      "status": "OPEN",
+      "phase": "plan"
+    }
+  ],
+  "model_tool_trajectory": [],
+  "repair_rounds": 0,
+  "verifier_invoked": false,
+  "original_patch_applied": false,
+  "exit_check_passed": false,
+  "evidence_scope": "Real model with restricted Docker checks"
+}

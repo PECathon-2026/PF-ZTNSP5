@@ -1,0 +1,233 @@
+{
+  "scenario": "security",
+  "mode": "live",
+  "recorded_at": "2026-10-29T20:02:20.419629+00:00",
+  "status": "VERIFYING",
+  "failure_reason": null,
+  "original_unchanged": true,
+  "request": "Remove unsanitized shell execution and use an allowlisted, shell-free subprocess call.",
+  "checks": [],
+  "candidate_chain": [
+    {
+      "id": "cand-305f64ccf3cf4ae1",
+      "fingerprint": "207ada05d7f5c39560d94fefd1113f245920d4fe6fd8b0addc99f78eca24436f",
+      "parent": null,
+      "changed_files": []
+    },
+    {
+      "id": "cand-ff7bcb03792149dd",
+      "fingerprint": "aaf59432b39fe896c4be92e3a0634225aaed2ab6cfb5d3b3a6b0c24436aa5512",
+      "parent": "cand-305f64ccf3cf4ae1",
+      "changed_files": [
+        "runner.py"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-2e60f2cb",
+      "candidate_id": "cand-305f64ccf3cf4ae1",
+      "fingerprint": "207ada05d7f5c39560d94fefd1113f245920d4fe6fd8b0addc99f78eca24436f",
+      "kind": "BASELINE",
+      "exit_code": 1,
+      "duration_ms": 2016,
+      "stdout_artifact_id": "art-4e604ade793a",
+      "stderr_artifact_id": "art-e3b0c44298fc",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--pull",
+        "never",
+        "--name",
+        "devpilot-6c83662b79474176b3521ab3a5a4a246",
+        "--network",
+        "none",
+        "--read-only",
+        "--user",
+        "1001:1001",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--memory",
+        "512m",
+        "--cpus",
+        "1.0",
+        "--pids-limit",
+        "64",
+        "--tmpfs",
+        "/tmp:rw,noexec,nosuid,size=64m",
+        "-e",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "-e",
+        "PYTHONPATH=/workspace",
+        "-v",
+        "D:/MyDocuments/pecathon/evaluation/results/run-20261029T200121Z-65f5c62b/workspaces/miss-3e4295a9/candidates/cand-305f64ccf3cf4ae1:/workspace:ro",
+        "-w",
+        "/workspace",
+        "devpilot-checks:py312",
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "classification": "BASELINE_DEFECT",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-aa24af7a",
+      "candidate_id": "cand-ff7bcb03792149dd",
+      "fingerprint": "aaf59432b39fe896c4be92e3a0634225aaed2ab6cfb5d3b3a6b0c24436aa5512",
+      "kind": "DIFF",
+      "exit_code": null,
+      "duration_ms": 0,
+      "stdout_artifact_id": "art-4c1db317ee5d",
+      "stderr_artifact_id": null,
+      "command": [],
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-a8c46d12",
+      "candidate_id": "cand-ff7bcb03792149dd",
+      "fingerprint": "aaf59432b39fe896c4be92e3a0634225aaed2ab6cfb5d3b3a6b0c24436aa5512",
+      "kind": "TEST",
+      "exit_code": 0,
+      "duration_ms": 1797,
+      "stdout_artifact_id": "art-35d86279d96e",
+      "stderr_artifact_id": "art-e3b0c44298fc",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--pull",
+        "never",
+        "--name",
+        "devpilot-74ddc08def214328954d9b5abf349e9d",
+        "--network",
+        "none",
+        "--read-only",
+        "--user",
+        "1001:1001",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--memory",
+        "512m",
+        "--cpus",
+        "1.0",
+        "--pids-limit",
+        "64",
+        "--tmpfs",
+        "/tmp:rw,noexec,nosuid,size=64m",
+        "-e",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "-e",
+        "PYTHONPATH=/workspace",
+        "-v",
+        "D:/MyDocuments/pecathon/evaluation/results/run-20261029T200121Z-65f5c62b/workspaces/miss-3e4295a9/candidates/cand-ff7bcb03792149dd:/workspace:ro",
+        "-w",
+        "/workspace",
+        "devpilot-checks:py312",
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "classification": "PASS",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-2ad3b8a7",
+      "candidate_id": "cand-ff7bcb03792149dd",
+      "fingerprint": "aaf59432b39fe896c4be92e3a0634225aaed2ab6cfb5d3b3a6b0c24436aa5512",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "duration_ms": 0,
+      "stdout_artifact_id": "art-6a484f33826d",
+      "stderr_artifact_id": null,
+      "command": [],
+      "classification": null,
+      "controlled_evaluation": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-e16512fb",
+      "candidate_id": "cand-305f64ccf3cf4ae1",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "RESOLVED",
+      "evidence_ids": [
+        "ev-2e60f2cb"
+      ],
+      "resolution_evidence_ids": [
+        "ev-a8c46d12"
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "type": "CLARIFICATION",
+      "sender": "SHOGUN",
+      "recipient": "USER",
+      "candidate_id": "cand-305f64ccf3cf4ae1"
+    },
+    {
+      "type": "CLARIFICATION",
+      "sender": "USER",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-305f64ccf3cf4ae1"
+    },
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "USER",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-ff7bcb03792149dd"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-ff7bcb03792149dd"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-ff7bcb03792149dd"
+    }
+  ],
+  "clarifications": [
+    {
+      "id": "question-cf2db8ca310f49fe",
+      "status": "ANSWERED",
+      "phase": "plan",
+      "question": "Which commands and arguments should run_command allow? Should the allowlist contain exact command strings mapped to fixed argument lists, or approved executables with permitted arguments?"
+    }
+  ],
+  "model_tool_trajectory": [],
+  "repair_rounds": 0,
+  "verifier_invoked": false,
+  "original_patch_applied": false,
+  "exit_check_passed": false,
+  "evidence_scope": "Real model with restricted Docker checks"
+}

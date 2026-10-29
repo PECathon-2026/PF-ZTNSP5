@@ -1,0 +1,335 @@
+{
+  "scenario": "feature",
+  "mode": "controlled",
+  "recorded_at": "2026-10-29T19:50:52.609287+00:00",
+  "status": "VERIFYING",
+  "failure_reason": null,
+  "original_unchanged": true,
+  "request": "Add active/completed status filtering, reject unsupported statuses and preserve sorting.",
+  "checks": [
+    {
+      "candidate_dir": "D:\\MyDocuments\\pecathon\\evaluation\\results\\run-20261029T195050Z-037d1d31\\workspaces\\miss-787279b8\\candidates\\cand-07551457235b4dfb",
+      "profile": "python_pytest",
+      "oracle_passed": false
+    },
+    {
+      "candidate_dir": "D:\\MyDocuments\\pecathon\\evaluation\\results\\run-20261029T195050Z-037d1d31\\workspaces\\miss-787279b8\\candidates\\cand-8a8f7644a2554e40",
+      "profile": "python_pytest",
+      "oracle_passed": false
+    },
+    {
+      "candidate_dir": "D:\\MyDocuments\\pecathon\\evaluation\\results\\run-20261029T195050Z-037d1d31\\workspaces\\miss-787279b8\\candidates\\cand-6486de5e91964d23",
+      "profile": "python_pytest",
+      "oracle_passed": true
+    }
+  ],
+  "candidate_chain": [
+    {
+      "id": "cand-07551457235b4dfb",
+      "fingerprint": "2a0ef3bc66c81217f36b0407177a0c1ef7badd6fbf9191cf41f96a62928e57f2",
+      "parent": null,
+      "changed_files": []
+    },
+    {
+      "id": "cand-8a8f7644a2554e40",
+      "fingerprint": "08a661b9f7d66824065a691021e8b73cb6339099882cf56b61c32da4b1070dfd",
+      "parent": "cand-07551457235b4dfb",
+      "changed_files": [
+        "tasks.py"
+      ]
+    },
+    {
+      "id": "cand-6486de5e91964d23",
+      "fingerprint": "ccb98884098d292b3c85d13960bc60aed1cc9db89cf2428ab4122b96f48822b5",
+      "parent": "cand-8a8f7644a2554e40",
+      "changed_files": [
+        "tasks.py"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-1c56cb72",
+      "candidate_id": "cand-07551457235b4dfb",
+      "fingerprint": "2a0ef3bc66c81217f36b0407177a0c1ef7badd6fbf9191cf41f96a62928e57f2",
+      "kind": "BASELINE",
+      "exit_code": 1,
+      "classification": "BASELINE_DEFECT",
+      "controlled_evaluation": true
+    },
+    {
+      "id": "ev-2c10ec6c",
+      "candidate_id": "cand-8a8f7644a2554e40",
+      "fingerprint": "08a661b9f7d66824065a691021e8b73cb6339099882cf56b61c32da4b1070dfd",
+      "kind": "DIFF",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-7c683f0b",
+      "candidate_id": "cand-8a8f7644a2554e40",
+      "fingerprint": "08a661b9f7d66824065a691021e8b73cb6339099882cf56b61c32da4b1070dfd",
+      "kind": "TEST",
+      "exit_code": 1,
+      "classification": "CODE_FAILURE",
+      "controlled_evaluation": true
+    },
+    {
+      "id": "ev-507378b8",
+      "candidate_id": "cand-8a8f7644a2554e40",
+      "fingerprint": "08a661b9f7d66824065a691021e8b73cb6339099882cf56b61c32da4b1070dfd",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-a1632465",
+      "candidate_id": "cand-6486de5e91964d23",
+      "fingerprint": "ccb98884098d292b3c85d13960bc60aed1cc9db89cf2428ab4122b96f48822b5",
+      "kind": "DIFF",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-3379d1a3",
+      "candidate_id": "cand-6486de5e91964d23",
+      "fingerprint": "ccb98884098d292b3c85d13960bc60aed1cc9db89cf2428ab4122b96f48822b5",
+      "kind": "TEST",
+      "exit_code": 0,
+      "classification": "PASS",
+      "controlled_evaluation": true
+    },
+    {
+      "id": "ev-8b83e7e7",
+      "candidate_id": "cand-6486de5e91964d23",
+      "fingerprint": "ccb98884098d292b3c85d13960bc60aed1cc9db89cf2428ab4122b96f48822b5",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-73e92696",
+      "candidate_id": "cand-07551457235b4dfb",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "RESOLVED",
+      "evidence_ids": [
+        "ev-1c56cb72"
+      ],
+      "resolution_evidence_ids": [
+        "ev-3379d1a3"
+      ]
+    },
+    {
+      "id": "find-c732cb81",
+      "candidate_id": "cand-8a8f7644a2554e40",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "RESOLVED",
+      "evidence_ids": [
+        "ev-7c683f0b"
+      ],
+      "resolution_evidence_ids": [
+        "ev-3379d1a3"
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "USER",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-8a8f7644a2554e40"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-8a8f7644a2554e40"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-8a8f7644a2554e40"
+    },
+    {
+      "type": "FINDING",
+      "sender": "SENTINEL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-8a8f7644a2554e40"
+    },
+    {
+      "type": "FINDING",
+      "sender": "SENTINEL",
+      "recipient": "SAMURAI",
+      "candidate_id": "cand-8a8f7644a2554e40"
+    },
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "SAMURAI",
+      "candidate_id": "cand-8a8f7644a2554e40"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-6486de5e91964d23"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-6486de5e91964d23"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-6486de5e91964d23"
+    }
+  ],
+  "clarifications": [],
+  "model_tool_trajectory": [
+    {
+      "role": "plan",
+      "step": 1,
+      "tool_calls": [
+        "read_file"
+      ]
+    },
+    {
+      "role": "plan",
+      "step": 2,
+      "tool_calls": [
+        "submit_plan"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 1,
+      "tool_calls": [
+        "read_file"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 2,
+      "tool_calls": [
+        "apply_patch"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 3,
+      "tool_calls": [
+        "read_file",
+        "read_diff"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 4,
+      "tool_calls": [
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "review",
+      "step": 1,
+      "tool_calls": [
+        "read_file",
+        "read_diff"
+      ]
+    },
+    {
+      "role": "review",
+      "step": 2,
+      "tool_calls": [
+        "submit_review"
+      ]
+    },
+    {
+      "role": "repair",
+      "step": 1,
+      "tool_calls": [
+        "read_file"
+      ]
+    },
+    {
+      "role": "repair",
+      "step": 2,
+      "tool_calls": [
+        "submit_repair_plan"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 1,
+      "tool_calls": [
+        "read_file"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 2,
+      "tool_calls": [
+        "apply_patch"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 3,
+      "tool_calls": [
+        "read_file",
+        "read_diff"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 4,
+      "tool_calls": [
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "review",
+      "step": 1,
+      "tool_calls": [
+        "read_file",
+        "read_diff"
+      ]
+    },
+    {
+      "role": "review",
+      "step": 2,
+      "tool_calls": [
+        "submit_review"
+      ]
+    }
+  ],
+  "repair_rounds": 1,
+  "verifier_invoked": false,
+  "original_patch_applied": false,
+  "exit_check_passed": true,
+  "evidence_scope": "Scripted model and source-level oracle; checks were NOT executed"
+}

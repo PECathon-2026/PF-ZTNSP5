@@ -17,6 +17,9 @@ htmlcov/
 
 # Local databases and runtime data
 /data/
+/backend/data/
+/evaluation/results/**/workspaces/
+/evaluation/results/**/artifacts/
 *.db
 *.sqlite3
 

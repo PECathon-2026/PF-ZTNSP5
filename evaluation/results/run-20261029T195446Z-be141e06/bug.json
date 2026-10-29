@@ -1,0 +1,129 @@
+{
+  "scenario": "bug",
+  "mode": "live",
+  "recorded_at": "2026-10-29T19:56:27.305321+00:00",
+  "status": "VERIFYING",
+  "failure_reason": null,
+  "original_unchanged": true,
+  "request": "Fix pagination off-by-one; preserve full page size and the last partial page.",
+  "checks": [],
+  "candidate_chain": [
+    {
+      "id": "cand-f26089e113c94573",
+      "fingerprint": "9509cc40399ec21480b13e0b1b7367b4f3a018b9b85d11c2bc23bc951d401607",
+      "parent": null,
+      "changed_files": []
+    },
+    {
+      "id": "cand-58ef2e483ba14824",
+      "fingerprint": "a482448747f5b4d6b3a87d252aba8b5cdb17449e32026259f39562ae3a9a66d0",
+      "parent": "cand-f26089e113c94573",
+      "changed_files": [
+        "pagination.py"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-2afea192",
+      "candidate_id": "cand-f26089e113c94573",
+      "fingerprint": "9509cc40399ec21480b13e0b1b7367b4f3a018b9b85d11c2bc23bc951d401607",
+      "kind": "BASELINE",
+      "exit_code": 1,
+      "classification": "BASELINE_DEFECT",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-29dba21a",
+      "candidate_id": "cand-58ef2e483ba14824",
+      "fingerprint": "a482448747f5b4d6b3a87d252aba8b5cdb17449e32026259f39562ae3a9a66d0",
+      "kind": "DIFF",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-6d11c60b",
+      "candidate_id": "cand-58ef2e483ba14824",
+      "fingerprint": "a482448747f5b4d6b3a87d252aba8b5cdb17449e32026259f39562ae3a9a66d0",
+      "kind": "TEST",
+      "exit_code": 0,
+      "classification": "PASS",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-f324d321",
+      "candidate_id": "cand-58ef2e483ba14824",
+      "fingerprint": "a482448747f5b4d6b3a87d252aba8b5cdb17449e32026259f39562ae3a9a66d0",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-ea304fd0",
+      "candidate_id": "cand-f26089e113c94573",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "RESOLVED",
+      "evidence_ids": [
+        "ev-2afea192"
+      ],
+      "resolution_evidence_ids": [
+        "ev-6d11c60b"
+      ]
+    },
+    {
+      "id": "find-f43db7bb",
+      "candidate_id": "cand-58ef2e483ba14824",
+      "source": "SHADOW_COUNCIL",
+      "severity": "MEDIUM",
+      "status": "OPEN",
+      "evidence_ids": [
+        "ev-29dba21a"
+      ],
+      "resolution_evidence_ids": []
+    }
+  ],
+  "messages": [
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "USER",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-58ef2e483ba14824"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-58ef2e483ba14824"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-58ef2e483ba14824"
+    }
+  ],
+  "clarifications": [],
+  "model_tool_trajectory": [],
+  "repair_rounds": 0,
+  "verifier_invoked": false,
+  "original_patch_applied": false,
+  "exit_check_passed": true,
+  "evidence_scope": "Real model with restricted Docker checks"
+}

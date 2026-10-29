@@ -8,6 +8,13 @@ from app.schemas.mission import (
     MissionStatus,
 )
 from app.schemas.task import MissionTask
+from app.schemas.candidate import Candidate
+from app.schemas.evidence import Evidence
+from app.schemas.finding import Finding
+from app.schemas.agent_message import AgentMessage
+from app.schemas.guild import Clarification
+from app.schemas.approval import Approval
+from app.storage.guild import GuildStore, GuildConflict
 from app.storage.database import get_database
 
 router = APIRouter(prefix="/api/missions", tags=["Missions"])
@@ -17,6 +24,14 @@ class MissionDetailResponse(BaseModel):
     mission: Mission
     criteria: list[AcceptanceCriterion] = Field(default_factory=list)
     tasks: list[MissionTask] = Field(default_factory=list)
+    candidates: list[Candidate] = Field(default_factory=list)
+    evidence: list[Evidence] = Field(default_factory=list)
+    findings: list[Finding] = Field(default_factory=list)
+    messages: list[AgentMessage] = Field(default_factory=list)
+    clarifications: list[Clarification] = Field(default_factory=list)
+    plan_revision: int = 0
+    approvals: list[Approval] = Field(default_factory=list)
+    repository_files: list[str] = Field(default_factory=list)
 
 
 @router.post("", response_model=MissionDetailResponse, status_code=status.HTTP_201_CREATED)
@@ -80,11 +95,21 @@ async def get_mission(mission_id: str) -> MissionDetailResponse:
 
     criteria = await db.get_criteria(mission_id)
     tasks = await db.get_tasks(mission_id)
+    store = GuildStore(db)
+    context = await store.context(mission_id) or {}
 
     return MissionDetailResponse(
         mission=mission,
         criteria=criteria,
         tasks=tasks,
+        candidates=await store.records(Candidate, mission_id),
+        evidence=await store.records(Evidence, mission_id),
+        findings=await store.records(Finding, mission_id),
+        messages=await store.records(AgentMessage, mission_id),
+        clarifications=await store.records(Clarification, mission_id),
+        plan_revision=context.get("plan_revision", 0),
+        approvals=await store.records(Approval, mission_id),
+        repository_files=context.get("repository", {}).get("included_files", []),
     )
 
 
@@ -105,14 +130,11 @@ async def cancel_mission(mission_id: str) -> MissionDetailResponse:
             detail=f"Mission is already in terminal state '{mission.status.value}'.",
         )
 
-    await db.update_mission_status(mission_id, MissionStatus.CANCELLED, failure_reason="Cancelled by user")
-
-    await db.emit_event(
-        mission_id=mission_id,
-        event_type="MISSION_CANCELLED",
-        source="SYSTEM",
-        display_payload={"reason": "User requested cancellation"},
-    )
+    from app.services.guild_service import get_guild_controller
+    try:
+        await get_guild_controller().cancel(mission_id)
+    except GuildConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
 
     updated = await db.get_mission(mission_id)
     criteria = await db.get_criteria(mission_id)

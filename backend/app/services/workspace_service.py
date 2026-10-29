@@ -1,12 +1,14 @@
 import difflib
 import hashlib
 import os
+import re
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 from app.schemas.candidate import Candidate, CandidateState
-from app.security.paths import is_path_excluded
+from app.security.paths import canonicalize_and_validate_path, is_path_excluded
 from app.services.repository_service import get_repository_service
 from app.settings import get_settings
 
@@ -20,7 +22,7 @@ class WorkspaceService:
     """Manages disposable execution workspaces, candidate snapshots, and writer leases."""
 
     def __init__(self, base_workspaces_dir: Path | None = None):
-        self.base_dir = base_workspaces_dir or (get_settings().data_dir / "workspaces")
+        self.base_dir = (base_workspaces_dir or (get_settings().data_dir / "workspaces")).resolve()
         self.base_dir.mkdir(parents=True, exist_ok=True)
         # mission_id -> current lease holder agent name
         self._leases: dict[str, str] = {}
@@ -28,10 +30,17 @@ class WorkspaceService:
         self._candidates: dict[str, Candidate] = {}
 
     def get_mission_workspace_dir(self, mission_id: str) -> Path:
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", mission_id):
+            raise ValueError("Invalid mission workspace identifier.")
         return self.base_dir / mission_id / "workspace"
 
+    def get_baseline_dir(self, mission_id: str) -> Path:
+        return self.get_mission_workspace_dir(mission_id).parent / "baseline"
+
     def get_candidate_dir(self, mission_id: str, candidate_id: str) -> Path:
-        return self.base_dir / mission_id / "candidates" / candidate_id
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", candidate_id):
+            raise ValueError("Invalid candidate identifier.")
+        return self.get_mission_workspace_dir(mission_id).parent / "candidates" / candidate_id
 
     def create_disposable_workspace(self, mission_id: str, repository_id: str) -> Path:
         """
@@ -45,17 +54,25 @@ class WorkspaceService:
 
         repo_path = Path(repo["path"])
         ws_dir = self.get_mission_workspace_dir(mission_id)
-        if ws_dir.exists():
-            shutil.rmtree(ws_dir, ignore_errors=True)
-        ws_dir.mkdir(parents=True, exist_ok=True)
+        if ws_dir.resolve().is_relative_to(repo_path.resolve()) or repo_path.resolve().is_relative_to(self.base_dir.resolve()):
+            raise ValueError("Disposable storage and the original repository must not overlap.")
+        if ws_dir.parent.exists():
+            raise FileExistsError("Mission workspace already exists; implicit reset is forbidden.")
+        ws_dir.mkdir(parents=True)
+        baseline_dir = self.get_baseline_dir(mission_id)
+        baseline_dir.mkdir()
 
         # Copy only approved included files
         for rel_file in repo["included_files"]:
-            src = repo_path / rel_file
+            src = canonicalize_and_validate_path(repo_path, rel_file)
             dest = ws_dir / rel_file
             dest.parent.mkdir(parents=True, exist_ok=True)
-            if src.exists():
-                shutil.copy2(src, dest)
+            if not src.is_file() or src.stat().st_size > get_settings().max_file_size_bytes:
+                raise ValueError("Repository manifest changed; reconnect before creating a workspace.")
+            shutil.copy2(src, dest)
+            baseline_file = baseline_dir / rel_file
+            baseline_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(dest, baseline_file)
 
         return ws_dir
 
@@ -64,7 +81,7 @@ class WorkspaceService:
         Grants write access to an agent. Only one agent may hold the writer lease at a time.
         """
         current_holder = self._leases.get(mission_id)
-        if current_holder and current_holder != agent_name:
+        if current_holder:
             raise WriterLeaseError(
                 f"Workspace write lease already held by '{current_holder}'. Agent '{agent_name}' denied write access."
             )
@@ -75,20 +92,25 @@ class WorkspaceService:
             del self._leases[mission_id]
 
     def _compute_dir_hash(self, directory: Path) -> tuple[str, list[str]]:
+        if not directory.is_dir():
+            raise FileNotFoundError("Workspace snapshot is missing")
         hasher = hashlib.sha256()
         files_list: list[str] = []
-        for root, _, files in os.walk(directory):
+        for root, dirs, files in os.walk(directory):
             rel_root = Path(root).relative_to(directory)
+            dirs[:] = sorted(d for d in dirs if not is_path_excluded(rel_root / d))
             for f in sorted(files):
                 rel_f = rel_root / f if str(rel_root) != "." else Path(f)
                 if is_path_excluded(rel_f):
                     continue
                 rel_str = str(rel_f).replace("\\", "/")
                 files_list.append(rel_str)
-                full_path = Path(root) / f
-                hasher.update(rel_str.encode("utf-8"))
+                full_path = canonicalize_and_validate_path(directory, rel_str)
+                path_bytes = rel_str.encode("utf-8")
+                hasher.update(len(path_bytes).to_bytes(8, "big"))
+                hasher.update(path_bytes)
                 with open(full_path, "rb") as fp:
-                    hasher.update(fp.read())
+                    hasher.update(hashlib.sha256(fp.read()).digest())
         return hasher.hexdigest(), sorted(files_list)
 
     def freeze_candidate(
@@ -107,10 +129,9 @@ class WorkspaceService:
 
         content_fingerprint, ws_files = self._compute_dir_hash(ws_dir)
 
-        repo_service = get_repository_service()
-        repo = repo_service.get_repository(repository_id)
-        baseline_files = set(repo["included_files"]) if repo else set()
-        repo_path = Path(repo["path"]) if repo else None
+        repo_path = self.get_baseline_dir(mission_id)
+        _, baseline_list = self._compute_dir_hash(repo_path)
+        baseline_files = set(baseline_list)
 
         changed_files: list[str] = []
         for rel_f in ws_files:
@@ -122,11 +143,10 @@ class WorkspaceService:
                 if not base_file_path.exists() or ws_file_path.read_bytes() != base_file_path.read_bytes():
                     changed_files.append(rel_f)
 
-        cand_id = f"cand-{content_fingerprint[:8]}"
+        changed_files.extend(sorted(baseline_files - set(ws_files)))
+        cand_id = f"cand-{uuid4().hex[:16]}"
         candidate_dir = self.get_candidate_dir(mission_id, cand_id)
-        if candidate_dir.exists():
-            shutil.rmtree(candidate_dir, ignore_errors=True)
-        candidate_dir.mkdir(parents=True, exist_ok=True)
+        candidate_dir.mkdir(parents=True)
 
         # Copy workspace to candidate dir
         for rel_f in ws_files:
@@ -134,6 +154,9 @@ class WorkspaceService:
             dst = candidate_dir / rel_f
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
+
+        if self._compute_dir_hash(candidate_dir)[0] != content_fingerprint:
+            raise ValueError("Candidate changed while being frozen")
 
         candidate = Candidate(
             id=cand_id,
@@ -152,10 +175,17 @@ class WorkspaceService:
     def get_candidate(self, candidate_id: str) -> Candidate | None:
         return self._candidates.get(candidate_id)
 
+    def validate_candidate(self, candidate: Candidate) -> None:
+        if candidate.state != CandidateState.FROZEN:
+            raise ValueError("Execution requires a frozen candidate")
+        directory = self.get_candidate_dir(candidate.mission_id, candidate.id)
+        if self._compute_dir_hash(directory)[0] != candidate.content_fingerprint:
+            raise ValueError("Frozen candidate fingerprint mismatch")
+
     def generate_candidate_diff(self, mission_id: str, repository_id: str, candidate_id: str) -> dict[str, Any]:
         """Generates unified diff between original repository and frozen candidate snapshot."""
         candidate = self.get_candidate(candidate_id)
-        if not candidate:
+        if not candidate or candidate.mission_id != mission_id:
             raise KeyError(f"Candidate '{candidate_id}' not found.")
 
         repo_service = get_repository_service()
@@ -163,7 +193,7 @@ class WorkspaceService:
         if not repo:
             raise KeyError(f"Repository '{repository_id}' not found.")
 
-        repo_path = Path(repo["path"])
+        repo_path = self.get_baseline_dir(mission_id)
         cand_dir = self.get_candidate_dir(mission_id, candidate_id)
 
         file_diffs: list[dict[str, Any]] = []

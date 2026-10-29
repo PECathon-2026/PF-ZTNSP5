@@ -1,0 +1,218 @@
+{
+  "scenario": "bug",
+  "mode": "controlled",
+  "recorded_at": "2026-10-29T19:50:19.022152+00:00",
+  "status": "VERIFYING",
+  "failure_reason": null,
+  "original_unchanged": true,
+  "request": "Fix pagination off-by-one; preserve full page size and the last partial page.",
+  "checks": [
+    {
+      "candidate_dir": "D:\\MyDocuments\\pecathon\\evaluation\\results\\run-20261029T195016Z-fd014247\\workspaces\\miss-e9aefb5b\\candidates\\cand-e33f5888299646e2",
+      "profile": "python_pytest",
+      "oracle_passed": false
+    },
+    {
+      "candidate_dir": "D:\\MyDocuments\\pecathon\\evaluation\\results\\run-20261029T195016Z-fd014247\\workspaces\\miss-e9aefb5b\\candidates\\cand-d2dc8268af6347bb",
+      "profile": "python_pytest",
+      "oracle_passed": true
+    }
+  ],
+  "candidate_chain": [
+    {
+      "id": "cand-e33f5888299646e2",
+      "fingerprint": "9509cc40399ec21480b13e0b1b7367b4f3a018b9b85d11c2bc23bc951d401607",
+      "parent": null,
+      "changed_files": []
+    },
+    {
+      "id": "cand-d2dc8268af6347bb",
+      "fingerprint": "a482448747f5b4d6b3a87d252aba8b5cdb17449e32026259f39562ae3a9a66d0",
+      "parent": "cand-e33f5888299646e2",
+      "changed_files": [
+        "pagination.py"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-f180e3fd",
+      "candidate_id": "cand-e33f5888299646e2",
+      "fingerprint": "9509cc40399ec21480b13e0b1b7367b4f3a018b9b85d11c2bc23bc951d401607",
+      "kind": "BASELINE",
+      "exit_code": 1,
+      "classification": "BASELINE_DEFECT",
+      "controlled_evaluation": true
+    },
+    {
+      "id": "ev-bfa27de7",
+      "candidate_id": "cand-d2dc8268af6347bb",
+      "fingerprint": "a482448747f5b4d6b3a87d252aba8b5cdb17449e32026259f39562ae3a9a66d0",
+      "kind": "DIFF",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-f9dc4494",
+      "candidate_id": "cand-d2dc8268af6347bb",
+      "fingerprint": "a482448747f5b4d6b3a87d252aba8b5cdb17449e32026259f39562ae3a9a66d0",
+      "kind": "TEST",
+      "exit_code": 0,
+      "classification": "PASS",
+      "controlled_evaluation": true
+    },
+    {
+      "id": "ev-00ed2f87",
+      "candidate_id": "cand-d2dc8268af6347bb",
+      "fingerprint": "a482448747f5b4d6b3a87d252aba8b5cdb17449e32026259f39562ae3a9a66d0",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-54198a20",
+      "candidate_id": "cand-e33f5888299646e2",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "RESOLVED",
+      "evidence_ids": [
+        "ev-f180e3fd"
+      ],
+      "resolution_evidence_ids": [
+        "ev-f9dc4494"
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "USER",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-d2dc8268af6347bb"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-d2dc8268af6347bb"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-d2dc8268af6347bb"
+    }
+  ],
+  "clarifications": [],
+  "model_tool_trajectory": [
+    {
+      "role": "plan",
+      "step": 1,
+      "tools_offered": [
+        "list_files",
+        "read_file",
+        "request_clarification",
+        "search_text",
+        "submit_plan"
+      ]
+    },
+    {
+      "role": "plan",
+      "step": 2,
+      "tools_offered": [
+        "list_files",
+        "read_file",
+        "request_clarification",
+        "search_text",
+        "submit_plan"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 1,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 2,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 3,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 4,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "review",
+      "step": 1,
+      "tools_offered": [
+        "read_diff",
+        "read_file",
+        "submit_review"
+      ]
+    },
+    {
+      "role": "review",
+      "step": 2,
+      "tools_offered": [
+        "read_diff",
+        "read_file",
+        "submit_review"
+      ]
+    }
+  ],
+  "repair_rounds": 0,
+  "verifier_invoked": false,
+  "original_patch_applied": false,
+  "exit_check_passed": true,
+  "evidence_scope": "Scripted model and source-level oracle; checks were NOT executed"
+}

@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from uuid import uuid4
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ApprovalDecision(str, Enum):
@@ -21,11 +21,13 @@ class Approval(BaseModel):
 
 
 class ApprovalRequest(BaseModel):
-    candidate_id: str
-    candidate_fingerprint: str
+    model_config = ConfigDict(strict=True, extra="forbid")
+    candidate_id: str = Field(min_length=1)
+    candidate_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     decision: ApprovalDecision
 
 
 class ApplyPatchRequest(BaseModel):
-    candidate_id: str
+    model_config = ConfigDict(strict=True, extra="forbid")
+    candidate_id: str = Field(min_length=1)
 

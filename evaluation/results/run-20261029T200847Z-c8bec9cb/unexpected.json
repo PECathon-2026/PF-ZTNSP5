@@ -1,0 +1,244 @@
+{
+  "scenario": "unexpected",
+  "mode": "live",
+  "recorded_at": "2026-10-29T20:13:45.313599+00:00",
+  "status": "VERIFYING",
+  "failure_reason": null,
+  "original_unchanged": true,
+  "request": "Make average fast; clarify how an empty input should behave before editing.",
+  "checks": [],
+  "candidate_chain": [
+    {
+      "id": "cand-27428bbb82e44e7a",
+      "fingerprint": "0b8cccef1714c7467f6364339e47cca8e658754221626204ee47361dabc6a026",
+      "parent": null,
+      "changed_files": []
+    },
+    {
+      "id": "cand-e04b580438974a4d",
+      "fingerprint": "cab7bd82c1a99adb41256f5385d660d0237b95583733647fcc89af7985ba367c",
+      "parent": "cand-27428bbb82e44e7a",
+      "changed_files": [
+        "metrics.py"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-31a838b4",
+      "candidate_id": "cand-27428bbb82e44e7a",
+      "fingerprint": "0b8cccef1714c7467f6364339e47cca8e658754221626204ee47361dabc6a026",
+      "kind": "BASELINE",
+      "exit_code": 1,
+      "duration_ms": 1547,
+      "stdout_artifact_id": "art-40fd41de1556",
+      "stderr_artifact_id": "art-e3b0c44298fc",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--pull",
+        "never",
+        "--name",
+        "devpilot-ceec8576eb1a431c983fe768c2b757b6",
+        "--network",
+        "none",
+        "--read-only",
+        "--user",
+        "1001:1001",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--memory",
+        "512m",
+        "--cpus",
+        "1.0",
+        "--pids-limit",
+        "64",
+        "--tmpfs",
+        "/tmp:rw,noexec,nosuid,size=64m",
+        "-e",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "-e",
+        "PYTHONPATH=/workspace",
+        "-v",
+        "D:/MyDocuments/pecathon/evaluation/results/run-20261029T200847Z-c8bec9cb/workspaces/miss-241a5baf/candidates/cand-27428bbb82e44e7a:/workspace:ro",
+        "-w",
+        "/workspace",
+        "devpilot-checks:py312",
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "classification": "BASELINE_DEFECT",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-c404d9cb",
+      "candidate_id": "cand-e04b580438974a4d",
+      "fingerprint": "cab7bd82c1a99adb41256f5385d660d0237b95583733647fcc89af7985ba367c",
+      "kind": "DIFF",
+      "exit_code": null,
+      "duration_ms": 0,
+      "stdout_artifact_id": "art-be5e29519c8b",
+      "stderr_artifact_id": null,
+      "command": [],
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-7a0f18d5",
+      "candidate_id": "cand-e04b580438974a4d",
+      "fingerprint": "cab7bd82c1a99adb41256f5385d660d0237b95583733647fcc89af7985ba367c",
+      "kind": "TEST",
+      "exit_code": 0,
+      "duration_ms": 2671,
+      "stdout_artifact_id": "art-149e983c325e",
+      "stderr_artifact_id": "art-e3b0c44298fc",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--pull",
+        "never",
+        "--name",
+        "devpilot-35efa8b5f4684ccca5553e8803706564",
+        "--network",
+        "none",
+        "--read-only",
+        "--user",
+        "1001:1001",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--memory",
+        "512m",
+        "--cpus",
+        "1.0",
+        "--pids-limit",
+        "64",
+        "--tmpfs",
+        "/tmp:rw,noexec,nosuid,size=64m",
+        "-e",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "-e",
+        "PYTHONPATH=/workspace",
+        "-v",
+        "D:/MyDocuments/pecathon/evaluation/results/run-20261029T200847Z-c8bec9cb/workspaces/miss-241a5baf/candidates/cand-e04b580438974a4d:/workspace:ro",
+        "-w",
+        "/workspace",
+        "devpilot-checks:py312",
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "classification": "PASS",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-5f8f848b",
+      "candidate_id": "cand-e04b580438974a4d",
+      "fingerprint": "cab7bd82c1a99adb41256f5385d660d0237b95583733647fcc89af7985ba367c",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "duration_ms": 0,
+      "stdout_artifact_id": "art-8f184b55578b",
+      "stderr_artifact_id": null,
+      "command": [],
+      "classification": null,
+      "controlled_evaluation": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-f9f7758f",
+      "candidate_id": "cand-27428bbb82e44e7a",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "RESOLVED",
+      "evidence_ids": [
+        "ev-31a838b4"
+      ],
+      "resolution_evidence_ids": [
+        "ev-7a0f18d5"
+      ]
+    },
+    {
+      "id": "find-c7a8df12",
+      "candidate_id": "cand-e04b580438974a4d",
+      "source": "SHADOW_COUNCIL",
+      "severity": "MEDIUM",
+      "status": "OPEN",
+      "evidence_ids": [
+        "ev-c404d9cb"
+      ],
+      "resolution_evidence_ids": []
+    }
+  ],
+  "messages": [
+    {
+      "type": "CLARIFICATION",
+      "sender": "SHOGUN",
+      "recipient": "USER",
+      "candidate_id": "cand-27428bbb82e44e7a"
+    },
+    {
+      "type": "CLARIFICATION",
+      "sender": "USER",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-27428bbb82e44e7a"
+    },
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "USER",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-e04b580438974a4d"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-e04b580438974a4d"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-e04b580438974a4d"
+    }
+  ],
+  "clarifications": [
+    {
+      "id": "question-06cc844392294598",
+      "status": "ANSWERED",
+      "phase": "plan",
+      "question": "Please confirm: should average([]) return zero, as the supplied acceptance criterion and test specify, rather than raise an exception?"
+    }
+  ],
+  "model_tool_trajectory": [],
+  "repair_rounds": 0,
+  "verifier_invoked": false,
+  "original_patch_applied": false,
+  "exit_check_passed": true,
+  "evidence_scope": "Real model with restricted Docker checks"
+}

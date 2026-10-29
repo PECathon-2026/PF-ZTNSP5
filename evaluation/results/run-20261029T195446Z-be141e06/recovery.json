@@ -1,0 +1,118 @@
+{
+  "scenario": "recovery",
+  "mode": "live",
+  "recorded_at": "2026-10-29T19:57:07.853115+00:00",
+  "status": "VERIFYING",
+  "failure_reason": null,
+  "original_unchanged": true,
+  "request": "Investigate pre-existing failed test for completed task status and fix the implementation.",
+  "checks": [],
+  "candidate_chain": [
+    {
+      "id": "cand-0817b61528fe48c4",
+      "fingerprint": "40433b2e5f725f3eed66cfa566869d4a50fa51c243325fd871a787771e2abb2b",
+      "parent": null,
+      "changed_files": []
+    },
+    {
+      "id": "cand-48c68ef2cd274690",
+      "fingerprint": "df6d03d6c93755c4eceac9150ee781fc3b61d1c7446e432bbedc6116a670e7cc",
+      "parent": "cand-0817b61528fe48c4",
+      "changed_files": [
+        "status.py"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-e8fb87c7",
+      "candidate_id": "cand-0817b61528fe48c4",
+      "fingerprint": "40433b2e5f725f3eed66cfa566869d4a50fa51c243325fd871a787771e2abb2b",
+      "kind": "BASELINE",
+      "exit_code": 1,
+      "classification": "BASELINE_DEFECT",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-05745427",
+      "candidate_id": "cand-48c68ef2cd274690",
+      "fingerprint": "df6d03d6c93755c4eceac9150ee781fc3b61d1c7446e432bbedc6116a670e7cc",
+      "kind": "DIFF",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-f618fe0a",
+      "candidate_id": "cand-48c68ef2cd274690",
+      "fingerprint": "df6d03d6c93755c4eceac9150ee781fc3b61d1c7446e432bbedc6116a670e7cc",
+      "kind": "TEST",
+      "exit_code": 0,
+      "classification": "PASS",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-4768ddda",
+      "candidate_id": "cand-48c68ef2cd274690",
+      "fingerprint": "df6d03d6c93755c4eceac9150ee781fc3b61d1c7446e432bbedc6116a670e7cc",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-34af147e",
+      "candidate_id": "cand-0817b61528fe48c4",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "RESOLVED",
+      "evidence_ids": [
+        "ev-e8fb87c7"
+      ],
+      "resolution_evidence_ids": [
+        "ev-f618fe0a"
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "USER",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-48c68ef2cd274690"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-48c68ef2cd274690"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-48c68ef2cd274690"
+    }
+  ],
+  "clarifications": [],
+  "model_tool_trajectory": [],
+  "repair_rounds": 0,
+  "verifier_invoked": false,
+  "original_patch_applied": false,
+  "exit_check_passed": true,
+  "evidence_scope": "Real model with restricted Docker checks"
+}

@@ -49,11 +49,15 @@ def apply_patch(
         raise PatchError(f"Target file '{relative_path}' does not exist for string replacement.")
 
     current_text = target_path.read_text(encoding="utf-8", errors="replace")
+    if not target:
+        raise PatchError("Target snippet cannot be empty.")
     if target not in current_text:
         raise PatchError(f"Target snippet not found in '{relative_path}'. Patch rejected.")
 
     occurrences = current_text.count(target)
     new_text = current_text.replace(target, replacement)
+    if len(new_text.encode("utf-8")) > get_settings().max_file_size_bytes:
+        raise PatchError("Patched content exceeds the file size limit.")
     target_path.write_text(new_text, encoding="utf-8")
 
     return {

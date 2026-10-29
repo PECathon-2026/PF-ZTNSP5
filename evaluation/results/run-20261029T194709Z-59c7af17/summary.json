@@ -1,0 +1,31 @@
+{
+  "mode": "live",
+  "all_passed": false,
+  "scenarios": [
+    {
+      "name": "feature",
+      "status": "BLOCKED",
+      "passed": false
+    },
+    {
+      "name": "bug",
+      "status": "BLOCKED",
+      "passed": false
+    },
+    {
+      "name": "recovery",
+      "status": "BLOCKED",
+      "passed": false
+    },
+    {
+      "name": "security",
+      "status": "BLOCKED",
+      "passed": false
+    },
+    {
+      "name": "unexpected",
+      "status": "BLOCKED",
+      "passed": false
+    }
+  ]
+}

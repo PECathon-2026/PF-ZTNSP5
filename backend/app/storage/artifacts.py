@@ -1,6 +1,7 @@
 import hashlib
 from pathlib import Path
 from app.settings import get_settings
+from app.security.redaction import redact_secrets
 
 
 class ArtifactStorage:
@@ -17,7 +18,7 @@ class ArtifactStorage:
         Returns (artifact_id, sha256_fingerprint).
         """
         if isinstance(content, str):
-            data = content.encode("utf-8")
+            data = redact_secrets(content).encode("utf-8")
         else:
             data = content
 

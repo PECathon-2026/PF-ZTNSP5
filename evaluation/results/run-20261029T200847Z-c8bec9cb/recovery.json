@@ -1,0 +1,214 @@
+{
+  "scenario": "recovery",
+  "mode": "live",
+  "recorded_at": "2026-10-29T20:11:12.609246+00:00",
+  "status": "VERIFYING",
+  "failure_reason": null,
+  "original_unchanged": true,
+  "request": "Investigate pre-existing failed test for completed task status and fix the implementation.",
+  "checks": [],
+  "candidate_chain": [
+    {
+      "id": "cand-044ac3039c704f19",
+      "fingerprint": "40433b2e5f725f3eed66cfa566869d4a50fa51c243325fd871a787771e2abb2b",
+      "parent": null,
+      "changed_files": []
+    },
+    {
+      "id": "cand-c2b895e80b094671",
+      "fingerprint": "df6d03d6c93755c4eceac9150ee781fc3b61d1c7446e432bbedc6116a670e7cc",
+      "parent": "cand-044ac3039c704f19",
+      "changed_files": [
+        "status.py"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-51638706",
+      "candidate_id": "cand-044ac3039c704f19",
+      "fingerprint": "40433b2e5f725f3eed66cfa566869d4a50fa51c243325fd871a787771e2abb2b",
+      "kind": "BASELINE",
+      "exit_code": 1,
+      "duration_ms": 2234,
+      "stdout_artifact_id": "art-53c4286a979b",
+      "stderr_artifact_id": "art-e3b0c44298fc",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--pull",
+        "never",
+        "--name",
+        "devpilot-f93e13ed3e1c4f58b10434cf084c6896",
+        "--network",
+        "none",
+        "--read-only",
+        "--user",
+        "1001:1001",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--memory",
+        "512m",
+        "--cpus",
+        "1.0",
+        "--pids-limit",
+        "64",
+        "--tmpfs",
+        "/tmp:rw,noexec,nosuid,size=64m",
+        "-e",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "-e",
+        "PYTHONPATH=/workspace",
+        "-v",
+        "D:/MyDocuments/pecathon/evaluation/results/run-20261029T200847Z-c8bec9cb/workspaces/miss-2e5f6503/candidates/cand-044ac3039c704f19:/workspace:ro",
+        "-w",
+        "/workspace",
+        "devpilot-checks:py312",
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "classification": "BASELINE_DEFECT",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-9ef89441",
+      "candidate_id": "cand-c2b895e80b094671",
+      "fingerprint": "df6d03d6c93755c4eceac9150ee781fc3b61d1c7446e432bbedc6116a670e7cc",
+      "kind": "DIFF",
+      "exit_code": null,
+      "duration_ms": 0,
+      "stdout_artifact_id": "art-c3d531dedc75",
+      "stderr_artifact_id": null,
+      "command": [],
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-0a8364e2",
+      "candidate_id": "cand-c2b895e80b094671",
+      "fingerprint": "df6d03d6c93755c4eceac9150ee781fc3b61d1c7446e432bbedc6116a670e7cc",
+      "kind": "TEST",
+      "exit_code": 0,
+      "duration_ms": 2547,
+      "stdout_artifact_id": "art-149e983c325e",
+      "stderr_artifact_id": "art-e3b0c44298fc",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--pull",
+        "never",
+        "--name",
+        "devpilot-a10cb3b7648545708f883987ff2ece04",
+        "--network",
+        "none",
+        "--read-only",
+        "--user",
+        "1001:1001",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--memory",
+        "512m",
+        "--cpus",
+        "1.0",
+        "--pids-limit",
+        "64",
+        "--tmpfs",
+        "/tmp:rw,noexec,nosuid,size=64m",
+        "-e",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "-e",
+        "PYTHONPATH=/workspace",
+        "-v",
+        "D:/MyDocuments/pecathon/evaluation/results/run-20261029T200847Z-c8bec9cb/workspaces/miss-2e5f6503/candidates/cand-c2b895e80b094671:/workspace:ro",
+        "-w",
+        "/workspace",
+        "devpilot-checks:py312",
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "classification": "PASS",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-a2864e3e",
+      "candidate_id": "cand-c2b895e80b094671",
+      "fingerprint": "df6d03d6c93755c4eceac9150ee781fc3b61d1c7446e432bbedc6116a670e7cc",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "duration_ms": 0,
+      "stdout_artifact_id": "art-2309d5cd7759",
+      "stderr_artifact_id": null,
+      "command": [],
+      "classification": null,
+      "controlled_evaluation": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-e38ac663",
+      "candidate_id": "cand-044ac3039c704f19",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "RESOLVED",
+      "evidence_ids": [
+        "ev-51638706"
+      ],
+      "resolution_evidence_ids": [
+        "ev-0a8364e2"
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "USER",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-c2b895e80b094671"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-c2b895e80b094671"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-c2b895e80b094671"
+    }
+  ],
+  "clarifications": [],
+  "model_tool_trajectory": [],
+  "repair_rounds": 0,
+  "verifier_invoked": false,
+  "original_patch_applied": false,
+  "exit_check_passed": true,
+  "evidence_scope": "Real model with restricted Docker checks"
+}

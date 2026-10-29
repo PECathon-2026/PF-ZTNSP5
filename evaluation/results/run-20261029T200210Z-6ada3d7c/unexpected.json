@@ -1,0 +1,233 @@
+{
+  "scenario": "unexpected",
+  "mode": "live",
+  "recorded_at": "2026-10-29T20:04:02.499065+00:00",
+  "status": "VERIFYING",
+  "failure_reason": null,
+  "original_unchanged": true,
+  "request": "Make average fast; clarify how an empty input should behave before editing.",
+  "checks": [],
+  "candidate_chain": [
+    {
+      "id": "cand-9cf84888a7824408",
+      "fingerprint": "0b8cccef1714c7467f6364339e47cca8e658754221626204ee47361dabc6a026",
+      "parent": null,
+      "changed_files": []
+    },
+    {
+      "id": "cand-05b74e360cd045a1",
+      "fingerprint": "268a42053c0551105f77a582c5ba01c4bdcc6d076789428728fb67827326b5cc",
+      "parent": "cand-9cf84888a7824408",
+      "changed_files": [
+        "metrics.py"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-ec9d1b2c",
+      "candidate_id": "cand-9cf84888a7824408",
+      "fingerprint": "0b8cccef1714c7467f6364339e47cca8e658754221626204ee47361dabc6a026",
+      "kind": "BASELINE",
+      "exit_code": 1,
+      "duration_ms": 1469,
+      "stdout_artifact_id": "art-40fd41de1556",
+      "stderr_artifact_id": "art-e3b0c44298fc",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--pull",
+        "never",
+        "--name",
+        "devpilot-52395615767e43ad9a60e9b91c5c7cb3",
+        "--network",
+        "none",
+        "--read-only",
+        "--user",
+        "1001:1001",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--memory",
+        "512m",
+        "--cpus",
+        "1.0",
+        "--pids-limit",
+        "64",
+        "--tmpfs",
+        "/tmp:rw,noexec,nosuid,size=64m",
+        "-e",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "-e",
+        "PYTHONPATH=/workspace",
+        "-v",
+        "D:/MyDocuments/pecathon/evaluation/results/run-20261029T200210Z-6ada3d7c/workspaces/miss-9a6d2ac6/candidates/cand-9cf84888a7824408:/workspace:ro",
+        "-w",
+        "/workspace",
+        "devpilot-checks:py312",
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "classification": "BASELINE_DEFECT",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-f1468540",
+      "candidate_id": "cand-05b74e360cd045a1",
+      "fingerprint": "268a42053c0551105f77a582c5ba01c4bdcc6d076789428728fb67827326b5cc",
+      "kind": "DIFF",
+      "exit_code": null,
+      "duration_ms": 0,
+      "stdout_artifact_id": "art-3d5c58451324",
+      "stderr_artifact_id": null,
+      "command": [],
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-491c2c3e",
+      "candidate_id": "cand-05b74e360cd045a1",
+      "fingerprint": "268a42053c0551105f77a582c5ba01c4bdcc6d076789428728fb67827326b5cc",
+      "kind": "TEST",
+      "exit_code": 0,
+      "duration_ms": 6875,
+      "stdout_artifact_id": "art-bfb94aa3bce5",
+      "stderr_artifact_id": "art-e3b0c44298fc",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--pull",
+        "never",
+        "--name",
+        "devpilot-2b4e544d4fff4eac8a273f7c2894e819",
+        "--network",
+        "none",
+        "--read-only",
+        "--user",
+        "1001:1001",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--memory",
+        "512m",
+        "--cpus",
+        "1.0",
+        "--pids-limit",
+        "64",
+        "--tmpfs",
+        "/tmp:rw,noexec,nosuid,size=64m",
+        "-e",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "-e",
+        "PYTHONPATH=/workspace",
+        "-v",
+        "D:/MyDocuments/pecathon/evaluation/results/run-20261029T200210Z-6ada3d7c/workspaces/miss-9a6d2ac6/candidates/cand-05b74e360cd045a1:/workspace:ro",
+        "-w",
+        "/workspace",
+        "devpilot-checks:py312",
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "classification": "PASS",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-1bdbc846",
+      "candidate_id": "cand-05b74e360cd045a1",
+      "fingerprint": "268a42053c0551105f77a582c5ba01c4bdcc6d076789428728fb67827326b5cc",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "duration_ms": 0,
+      "stdout_artifact_id": "art-d2fc393a8e63",
+      "stderr_artifact_id": null,
+      "command": [],
+      "classification": null,
+      "controlled_evaluation": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-e144e2cf",
+      "candidate_id": "cand-9cf84888a7824408",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "RESOLVED",
+      "evidence_ids": [
+        "ev-ec9d1b2c"
+      ],
+      "resolution_evidence_ids": [
+        "ev-491c2c3e"
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "type": "CLARIFICATION",
+      "sender": "SHOGUN",
+      "recipient": "USER",
+      "candidate_id": "cand-9cf84888a7824408"
+    },
+    {
+      "type": "CLARIFICATION",
+      "sender": "USER",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-9cf84888a7824408"
+    },
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "USER",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-05b74e360cd045a1"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-05b74e360cd045a1"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-05b74e360cd045a1"
+    }
+  ],
+  "clarifications": [
+    {
+      "id": "question-b3efec089eef468c",
+      "status": "ANSWERED",
+      "phase": "plan",
+      "question": "Should average([]) return zero, as the supplied criterion and test specify, rather than raising an exception? Also, does \u201cfast\u201d mean efficient linear-time computation, or do you have a specific performance target?"
+    }
+  ],
+  "model_tool_trajectory": [],
+  "repair_rounds": 0,
+  "verifier_invoked": false,
+  "original_patch_applied": false,
+  "exit_check_passed": true,
+  "evidence_scope": "Real model with restricted Docker checks"
+}

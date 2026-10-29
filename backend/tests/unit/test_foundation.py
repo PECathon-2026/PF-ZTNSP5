@@ -229,8 +229,15 @@ def test_api_health_endpoint():
     assert "storage_ready" in data
 
 
-def test_api_mission_crud_lifecycle():
-    client = TestClient(app)
+@pytest.fixture
+def mission_client(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.storage.database._db_instance", Database(tmp_path / "api-test.db"))
+    with TestClient(app) as client:
+        yield client
+
+
+def test_api_mission_crud_lifecycle(mission_client):
+    client = mission_client
 
     # 1. Create Mission
     payload = {

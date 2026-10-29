@@ -38,6 +38,7 @@ class ToolGateway:
         mission_id: str,
         workspace_dir: Path,
         base_dir: Path | None = None,
+        lease_holder: str | None = None,
     ) -> dict[str, Any]:
         """
         Validates and executes an approved tool call.
@@ -72,7 +73,7 @@ class ToolGateway:
         elif tool_name == "apply_patch":
             # Strictly verify that calling agent holds the writer lease
             current_holder = self.workspace_service._leases.get(mission_id)
-            if current_holder != agent_role:
+            if current_holder != (lease_holder or agent_role):
                 raise WriterLeaseError(
                     f"Agent '{agent_role}' cannot write. Active writer lease is held by '{current_holder}'."
                 )
