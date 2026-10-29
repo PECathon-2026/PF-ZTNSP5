@@ -7,6 +7,8 @@ from fastapi.staticfiles import StaticFiles
 from app.api.health import router as health_router
 from app.api.missions import router as missions_router
 from app.api.repositories import router as repositories_router
+from app.api.guild import router as guild_router
+from app.api.events import router as events_router
 from app.settings import get_settings
 from app.storage.database import get_database
 
@@ -18,7 +20,16 @@ async def lifespan(app: FastAPI):
     settings.ensure_directories()
     db = get_database()
     await db.init_db()
-    yield
+    from app.services import guild_service
+    controller = guild_service.get_guild_controller()
+    if controller.db is not db:
+        controller = guild_service.GuildController(database=db)
+        guild_service._controller = controller
+    await controller.store.recover()
+    try:
+        yield
+    finally:
+        await controller.close()
 
 
 app = FastAPI(
@@ -41,6 +52,8 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(missions_router)
 app.include_router(repositories_router)
+app.include_router(guild_router)
+app.include_router(events_router)
 
 # Mount frontend static files if directory exists
 frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"

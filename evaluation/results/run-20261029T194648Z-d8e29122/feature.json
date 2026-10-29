@@ -1,0 +1,395 @@
+{
+  "scenario": "feature",
+  "mode": "controlled",
+  "recorded_at": "2026-10-29T19:46:50.286129+00:00",
+  "status": "VERIFYING",
+  "failure_reason": null,
+  "original_unchanged": true,
+  "request": "Add active/completed status filtering, reject unsupported statuses and preserve sorting.",
+  "checks": [
+    {
+      "candidate_dir": "D:\\MyDocuments\\pecathon\\evaluation\\results\\run-20261029T194648Z-d8e29122\\workspaces\\miss-1b7be13f\\candidates\\cand-d71f990b05144b96",
+      "profile": "python_pytest",
+      "oracle_passed": false
+    },
+    {
+      "candidate_dir": "D:\\MyDocuments\\pecathon\\evaluation\\results\\run-20261029T194648Z-d8e29122\\workspaces\\miss-1b7be13f\\candidates\\cand-189f9b2dfb62443e",
+      "profile": "python_pytest",
+      "oracle_passed": false
+    },
+    {
+      "candidate_dir": "D:\\MyDocuments\\pecathon\\evaluation\\results\\run-20261029T194648Z-d8e29122\\workspaces\\miss-1b7be13f\\candidates\\cand-165ac4bea42943e9",
+      "profile": "python_pytest",
+      "oracle_passed": true
+    }
+  ],
+  "candidate_chain": [
+    {
+      "id": "cand-d71f990b05144b96",
+      "fingerprint": "2a0ef3bc66c81217f36b0407177a0c1ef7badd6fbf9191cf41f96a62928e57f2",
+      "parent": null,
+      "changed_files": []
+    },
+    {
+      "id": "cand-189f9b2dfb62443e",
+      "fingerprint": "08a661b9f7d66824065a691021e8b73cb6339099882cf56b61c32da4b1070dfd",
+      "parent": "cand-d71f990b05144b96",
+      "changed_files": [
+        "tasks.py"
+      ]
+    },
+    {
+      "id": "cand-165ac4bea42943e9",
+      "fingerprint": "ccb98884098d292b3c85d13960bc60aed1cc9db89cf2428ab4122b96f48822b5",
+      "parent": "cand-189f9b2dfb62443e",
+      "changed_files": [
+        "tasks.py"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-0b062123",
+      "candidate_id": "cand-d71f990b05144b96",
+      "fingerprint": "2a0ef3bc66c81217f36b0407177a0c1ef7badd6fbf9191cf41f96a62928e57f2",
+      "kind": "BASELINE",
+      "exit_code": 1,
+      "classification": "BASELINE_DEFECT",
+      "controlled_evaluation": true
+    },
+    {
+      "id": "ev-f230ae80",
+      "candidate_id": "cand-189f9b2dfb62443e",
+      "fingerprint": "08a661b9f7d66824065a691021e8b73cb6339099882cf56b61c32da4b1070dfd",
+      "kind": "DIFF",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-af26f589",
+      "candidate_id": "cand-189f9b2dfb62443e",
+      "fingerprint": "08a661b9f7d66824065a691021e8b73cb6339099882cf56b61c32da4b1070dfd",
+      "kind": "TEST",
+      "exit_code": 1,
+      "classification": "CODE_FAILURE",
+      "controlled_evaluation": true
+    },
+    {
+      "id": "ev-eb611b00",
+      "candidate_id": "cand-189f9b2dfb62443e",
+      "fingerprint": "08a661b9f7d66824065a691021e8b73cb6339099882cf56b61c32da4b1070dfd",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-23451560",
+      "candidate_id": "cand-165ac4bea42943e9",
+      "fingerprint": "ccb98884098d292b3c85d13960bc60aed1cc9db89cf2428ab4122b96f48822b5",
+      "kind": "DIFF",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-17852eb5",
+      "candidate_id": "cand-165ac4bea42943e9",
+      "fingerprint": "ccb98884098d292b3c85d13960bc60aed1cc9db89cf2428ab4122b96f48822b5",
+      "kind": "TEST",
+      "exit_code": 0,
+      "classification": "PASS",
+      "controlled_evaluation": true
+    },
+    {
+      "id": "ev-d403e27a",
+      "candidate_id": "cand-165ac4bea42943e9",
+      "fingerprint": "ccb98884098d292b3c85d13960bc60aed1cc9db89cf2428ab4122b96f48822b5",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-87dedbff",
+      "candidate_id": "cand-d71f990b05144b96",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "RESOLVED",
+      "evidence_ids": [
+        "ev-0b062123"
+      ],
+      "resolution_evidence_ids": [
+        "ev-17852eb5"
+      ]
+    },
+    {
+      "id": "find-49a0086a",
+      "candidate_id": "cand-189f9b2dfb62443e",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "RESOLVED",
+      "evidence_ids": [
+        "ev-af26f589"
+      ],
+      "resolution_evidence_ids": [
+        "ev-17852eb5"
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "USER",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-189f9b2dfb62443e"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-189f9b2dfb62443e"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-189f9b2dfb62443e"
+    },
+    {
+      "type": "FINDING",
+      "sender": "SENTINEL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-189f9b2dfb62443e"
+    },
+    {
+      "type": "FINDING",
+      "sender": "SENTINEL",
+      "recipient": "SAMURAI",
+      "candidate_id": "cand-189f9b2dfb62443e"
+    },
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "SAMURAI",
+      "candidate_id": "cand-189f9b2dfb62443e"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-165ac4bea42943e9"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-165ac4bea42943e9"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-165ac4bea42943e9"
+    }
+  ],
+  "clarifications": [],
+  "model_tool_trajectory": [
+    {
+      "role": "plan",
+      "step": 1,
+      "tools_offered": [
+        "list_files",
+        "read_file",
+        "request_clarification",
+        "search_text",
+        "submit_plan"
+      ]
+    },
+    {
+      "role": "plan",
+      "step": 2,
+      "tools_offered": [
+        "list_files",
+        "read_file",
+        "request_clarification",
+        "search_text",
+        "submit_plan"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 1,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 2,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 3,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 4,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "review",
+      "step": 1,
+      "tools_offered": [
+        "read_diff",
+        "read_file",
+        "submit_review"
+      ]
+    },
+    {
+      "role": "review",
+      "step": 2,
+      "tools_offered": [
+        "read_diff",
+        "read_file",
+        "submit_review"
+      ]
+    },
+    {
+      "role": "repair",
+      "step": 1,
+      "tools_offered": [
+        "list_files",
+        "read_file",
+        "request_clarification",
+        "search_text",
+        "submit_repair_plan"
+      ]
+    },
+    {
+      "role": "repair",
+      "step": 2,
+      "tools_offered": [
+        "list_files",
+        "read_file",
+        "request_clarification",
+        "search_text",
+        "submit_repair_plan"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 1,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 2,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 3,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 4,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "review",
+      "step": 1,
+      "tools_offered": [
+        "read_diff",
+        "read_file",
+        "submit_review"
+      ]
+    },
+    {
+      "role": "review",
+      "step": 2,
+      "tools_offered": [
+        "read_diff",
+        "read_file",
+        "submit_review"
+      ]
+    }
+  ],
+  "repair_rounds": 1,
+  "verifier_invoked": false,
+  "original_patch_applied": false,
+  "exit_check_passed": true,
+  "evidence_scope": "Scripted model and source-level oracle; checks were NOT executed"
+}

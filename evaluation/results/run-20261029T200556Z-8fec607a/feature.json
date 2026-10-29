@@ -1,0 +1,225 @@
+{
+  "scenario": "feature",
+  "mode": "live",
+  "recorded_at": "2026-10-29T20:06:51.246734+00:00",
+  "status": "VERIFYING",
+  "failure_reason": null,
+  "original_unchanged": true,
+  "request": "Add active/completed status filtering, reject unsupported statuses and preserve sorting.",
+  "checks": [],
+  "candidate_chain": [
+    {
+      "id": "cand-0a9303904d1348d3",
+      "fingerprint": "2a0ef3bc66c81217f36b0407177a0c1ef7badd6fbf9191cf41f96a62928e57f2",
+      "parent": null,
+      "changed_files": []
+    },
+    {
+      "id": "cand-0df54d20500a47b3",
+      "fingerprint": "114f9f44938768de3c177b8cec1c379b02266ca44ad471dc1af96b5ad0cafc54",
+      "parent": "cand-0a9303904d1348d3",
+      "changed_files": [
+        "tasks.py"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-7f110e3c",
+      "candidate_id": "cand-0a9303904d1348d3",
+      "fingerprint": "2a0ef3bc66c81217f36b0407177a0c1ef7badd6fbf9191cf41f96a62928e57f2",
+      "kind": "BASELINE",
+      "exit_code": 1,
+      "duration_ms": 1625,
+      "stdout_artifact_id": "art-1946409be948",
+      "stderr_artifact_id": "art-e3b0c44298fc",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--pull",
+        "never",
+        "--name",
+        "devpilot-39d8630cea0f4deca6182a091e12585e",
+        "--network",
+        "none",
+        "--read-only",
+        "--user",
+        "1001:1001",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--memory",
+        "512m",
+        "--cpus",
+        "1.0",
+        "--pids-limit",
+        "64",
+        "--tmpfs",
+        "/tmp:rw,noexec,nosuid,size=64m",
+        "-e",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "-e",
+        "PYTHONPATH=/workspace",
+        "-v",
+        "D:/MyDocuments/pecathon/evaluation/results/run-20261029T200556Z-8fec607a/workspaces/miss-453c0a55/candidates/cand-0a9303904d1348d3:/workspace:ro",
+        "-w",
+        "/workspace",
+        "devpilot-checks:py312",
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "classification": "BASELINE_DEFECT",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-37de26dd",
+      "candidate_id": "cand-0df54d20500a47b3",
+      "fingerprint": "114f9f44938768de3c177b8cec1c379b02266ca44ad471dc1af96b5ad0cafc54",
+      "kind": "DIFF",
+      "exit_code": null,
+      "duration_ms": 0,
+      "stdout_artifact_id": "art-0dc3038b90f1",
+      "stderr_artifact_id": null,
+      "command": [],
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-d051f26b",
+      "candidate_id": "cand-0df54d20500a47b3",
+      "fingerprint": "114f9f44938768de3c177b8cec1c379b02266ca44ad471dc1af96b5ad0cafc54",
+      "kind": "TEST",
+      "exit_code": 0,
+      "duration_ms": 2655,
+      "stdout_artifact_id": "art-e8b12eb9c14e",
+      "stderr_artifact_id": "art-e3b0c44298fc",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--pull",
+        "never",
+        "--name",
+        "devpilot-bfd4e79199b1430b8b04b463b1bb6c59",
+        "--network",
+        "none",
+        "--read-only",
+        "--user",
+        "1001:1001",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--memory",
+        "512m",
+        "--cpus",
+        "1.0",
+        "--pids-limit",
+        "64",
+        "--tmpfs",
+        "/tmp:rw,noexec,nosuid,size=64m",
+        "-e",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "-e",
+        "PYTHONPATH=/workspace",
+        "-v",
+        "D:/MyDocuments/pecathon/evaluation/results/run-20261029T200556Z-8fec607a/workspaces/miss-453c0a55/candidates/cand-0df54d20500a47b3:/workspace:ro",
+        "-w",
+        "/workspace",
+        "devpilot-checks:py312",
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "classification": "PASS",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-b10d5d14",
+      "candidate_id": "cand-0df54d20500a47b3",
+      "fingerprint": "114f9f44938768de3c177b8cec1c379b02266ca44ad471dc1af96b5ad0cafc54",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "duration_ms": 0,
+      "stdout_artifact_id": "art-cd6a6113b3ed",
+      "stderr_artifact_id": null,
+      "command": [],
+      "classification": null,
+      "controlled_evaluation": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-0fe4c6fa",
+      "candidate_id": "cand-0a9303904d1348d3",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "RESOLVED",
+      "evidence_ids": [
+        "ev-7f110e3c"
+      ],
+      "resolution_evidence_ids": [
+        "ev-d051f26b"
+      ]
+    },
+    {
+      "id": "find-da655e0d",
+      "candidate_id": "cand-0df54d20500a47b3",
+      "source": "SHADOW_COUNCIL",
+      "severity": "MEDIUM",
+      "status": "OPEN",
+      "evidence_ids": [
+        "ev-37de26dd"
+      ],
+      "resolution_evidence_ids": []
+    }
+  ],
+  "messages": [
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "USER",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-0df54d20500a47b3"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-0df54d20500a47b3"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-0df54d20500a47b3"
+    }
+  ],
+  "clarifications": [],
+  "model_tool_trajectory": [],
+  "repair_rounds": 0,
+  "verifier_invoked": false,
+  "original_patch_applied": false,
+  "exit_check_passed": true,
+  "evidence_scope": "Real model with restricted Docker checks"
+}

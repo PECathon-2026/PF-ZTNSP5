@@ -1,0 +1,247 @@
+{
+  "scenario": "unexpected",
+  "mode": "controlled",
+  "recorded_at": "2026-10-29T19:46:56.091499+00:00",
+  "status": "VERIFYING",
+  "failure_reason": null,
+  "original_unchanged": true,
+  "request": "Make average fast; clarify how an empty input should behave before editing.",
+  "checks": [
+    {
+      "candidate_dir": "D:\\MyDocuments\\pecathon\\evaluation\\results\\run-20261029T194648Z-d8e29122\\workspaces\\miss-e48e4e5e\\candidates\\cand-00e601e5b9674304",
+      "profile": "python_pytest",
+      "oracle_passed": false
+    },
+    {
+      "candidate_dir": "D:\\MyDocuments\\pecathon\\evaluation\\results\\run-20261029T194648Z-d8e29122\\workspaces\\miss-e48e4e5e\\candidates\\cand-e7374bbc8c9b4be6",
+      "profile": "python_pytest",
+      "oracle_passed": true
+    }
+  ],
+  "candidate_chain": [
+    {
+      "id": "cand-00e601e5b9674304",
+      "fingerprint": "0b8cccef1714c7467f6364339e47cca8e658754221626204ee47361dabc6a026",
+      "parent": null,
+      "changed_files": []
+    },
+    {
+      "id": "cand-e7374bbc8c9b4be6",
+      "fingerprint": "d61b04605bb16cfc743aaa5fa5a68cf67db070caf8e4c0194526c2fe12c8328f",
+      "parent": "cand-00e601e5b9674304",
+      "changed_files": [
+        "metrics.py"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-fbbf511e",
+      "candidate_id": "cand-00e601e5b9674304",
+      "fingerprint": "0b8cccef1714c7467f6364339e47cca8e658754221626204ee47361dabc6a026",
+      "kind": "BASELINE",
+      "exit_code": 1,
+      "classification": "BASELINE_DEFECT",
+      "controlled_evaluation": true
+    },
+    {
+      "id": "ev-8d3c5891",
+      "candidate_id": "cand-e7374bbc8c9b4be6",
+      "fingerprint": "d61b04605bb16cfc743aaa5fa5a68cf67db070caf8e4c0194526c2fe12c8328f",
+      "kind": "DIFF",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-1d938ab3",
+      "candidate_id": "cand-e7374bbc8c9b4be6",
+      "fingerprint": "d61b04605bb16cfc743aaa5fa5a68cf67db070caf8e4c0194526c2fe12c8328f",
+      "kind": "TEST",
+      "exit_code": 0,
+      "classification": "PASS",
+      "controlled_evaluation": true
+    },
+    {
+      "id": "ev-e437568c",
+      "candidate_id": "cand-e7374bbc8c9b4be6",
+      "fingerprint": "d61b04605bb16cfc743aaa5fa5a68cf67db070caf8e4c0194526c2fe12c8328f",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-6f9f679e",
+      "candidate_id": "cand-00e601e5b9674304",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "RESOLVED",
+      "evidence_ids": [
+        "ev-fbbf511e"
+      ],
+      "resolution_evidence_ids": [
+        "ev-1d938ab3"
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "type": "CLARIFICATION",
+      "sender": "SHOGUN",
+      "recipient": "USER",
+      "candidate_id": "cand-00e601e5b9674304"
+    },
+    {
+      "type": "CLARIFICATION",
+      "sender": "USER",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-00e601e5b9674304"
+    },
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "USER",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-e7374bbc8c9b4be6"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-e7374bbc8c9b4be6"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-e7374bbc8c9b4be6"
+    }
+  ],
+  "clarifications": [
+    {
+      "id": "question-e463305bea08492e",
+      "status": "ANSWERED",
+      "phase": "plan"
+    }
+  ],
+  "model_tool_trajectory": [
+    {
+      "role": "plan",
+      "step": 1,
+      "tools_offered": [
+        "list_files",
+        "read_file",
+        "request_clarification",
+        "search_text",
+        "submit_plan"
+      ]
+    },
+    {
+      "role": "plan",
+      "step": 1,
+      "tools_offered": [
+        "list_files",
+        "read_file",
+        "request_clarification",
+        "search_text",
+        "submit_plan"
+      ]
+    },
+    {
+      "role": "plan",
+      "step": 2,
+      "tools_offered": [
+        "list_files",
+        "read_file",
+        "request_clarification",
+        "search_text",
+        "submit_plan"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 1,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 2,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 3,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "developer",
+      "step": 4,
+      "tools_offered": [
+        "apply_patch",
+        "list_files",
+        "read_diff",
+        "read_file",
+        "search_text",
+        "submit_candidate"
+      ]
+    },
+    {
+      "role": "review",
+      "step": 1,
+      "tools_offered": [
+        "read_diff",
+        "read_file",
+        "submit_review"
+      ]
+    },
+    {
+      "role": "review",
+      "step": 2,
+      "tools_offered": [
+        "read_diff",
+        "read_file",
+        "submit_review"
+      ]
+    }
+  ],
+  "repair_rounds": 0,
+  "verifier_invoked": false,
+  "original_patch_applied": false,
+  "exit_check_passed": true,
+  "evidence_scope": "Scripted model and source-level oracle; checks were NOT executed"
+}

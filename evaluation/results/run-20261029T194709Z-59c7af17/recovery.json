@@ -1,0 +1,7 @@
+{
+  "scenario": "recovery",
+  "mode": "live",
+  "status": "BLOCKED",
+  "exit_check_passed": false,
+  "reason": "Docker Desktop Linux engine is unavailable; no model or repository checks were run"
+}

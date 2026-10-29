@@ -1,0 +1,157 @@
+{
+  "scenario": "unexpected",
+  "mode": "live",
+  "recorded_at": "2026-10-29T19:58:28.129692+00:00",
+  "status": "BLOCKED",
+  "failure_reason": "Check environment or timeout requires intervention",
+  "original_unchanged": true,
+  "request": "Make average fast; clarify how an empty input should behave before editing.",
+  "checks": [],
+  "candidate_chain": [
+    {
+      "id": "cand-54774e3997694bcd",
+      "fingerprint": "0b8cccef1714c7467f6364339e47cca8e658754221626204ee47361dabc6a026",
+      "parent": null,
+      "changed_files": []
+    },
+    {
+      "id": "cand-53f1db038717464e",
+      "fingerprint": "cab7bd82c1a99adb41256f5385d660d0237b95583733647fcc89af7985ba367c",
+      "parent": "cand-54774e3997694bcd",
+      "changed_files": [
+        "metrics.py"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-17841189",
+      "candidate_id": "cand-54774e3997694bcd",
+      "fingerprint": "0b8cccef1714c7467f6364339e47cca8e658754221626204ee47361dabc6a026",
+      "kind": "BASELINE",
+      "exit_code": 1,
+      "classification": "BASELINE_DEFECT",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-b934d9c2",
+      "candidate_id": "cand-53f1db038717464e",
+      "fingerprint": "cab7bd82c1a99adb41256f5385d660d0237b95583733647fcc89af7985ba367c",
+      "kind": "DIFF",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-b67a5b00",
+      "candidate_id": "cand-53f1db038717464e",
+      "fingerprint": "cab7bd82c1a99adb41256f5385d660d0237b95583733647fcc89af7985ba367c",
+      "kind": "TEST",
+      "exit_code": 126,
+      "classification": "ENVIRONMENT_ERROR",
+      "controlled_evaluation": false
+    },
+    {
+      "id": "ev-2bb13f9e",
+      "candidate_id": "cand-53f1db038717464e",
+      "fingerprint": "cab7bd82c1a99adb41256f5385d660d0237b95583733647fcc89af7985ba367c",
+      "kind": "REVIEW_FINDING",
+      "exit_code": null,
+      "classification": null,
+      "controlled_evaluation": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "find-295648b3",
+      "candidate_id": "cand-54774e3997694bcd",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "OPEN",
+      "evidence_ids": [
+        "ev-17841189"
+      ],
+      "resolution_evidence_ids": []
+    },
+    {
+      "id": "find-2a0a806c",
+      "candidate_id": "cand-53f1db038717464e",
+      "source": "SENTINEL",
+      "severity": "BLOCKING",
+      "status": "OPEN",
+      "evidence_ids": [
+        "ev-b67a5b00"
+      ],
+      "resolution_evidence_ids": []
+    }
+  ],
+  "messages": [
+    {
+      "type": "CLARIFICATION",
+      "sender": "SHOGUN",
+      "recipient": "USER",
+      "candidate_id": "cand-54774e3997694bcd"
+    },
+    {
+      "type": "CLARIFICATION",
+      "sender": "USER",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-54774e3997694bcd"
+    },
+    {
+      "type": "TASK_PROPOSAL",
+      "sender": "SHOGUN",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "USER",
+      "recipient": "CONTROLLER",
+      "candidate_id": null
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SENTINEL",
+      "candidate_id": "cand-53f1db038717464e"
+    },
+    {
+      "type": "HANDOFF",
+      "sender": "SAMURAI",
+      "recipient": "SHADOW_COUNCIL",
+      "candidate_id": "cand-53f1db038717464e"
+    },
+    {
+      "type": "TASK_RESULT",
+      "sender": "SHADOW_COUNCIL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-53f1db038717464e"
+    },
+    {
+      "type": "BLOCKER",
+      "sender": "SENTINEL",
+      "recipient": "SHOGUN",
+      "candidate_id": "cand-53f1db038717464e"
+    },
+    {
+      "type": "BLOCKER",
+      "sender": "SENTINEL",
+      "recipient": "SAMURAI",
+      "candidate_id": "cand-53f1db038717464e"
+    }
+  ],
+  "clarifications": [
+    {
+      "id": "question-d3eebb827be0492c",
+      "status": "ANSWERED",
+      "phase": "plan"
+    }
+  ],
+  "model_tool_trajectory": [],
+  "repair_rounds": 0,
+  "verifier_invoked": false,
+  "original_patch_applied": false,
+  "exit_check_passed": false,
+  "evidence_scope": "Real model with restricted Docker checks"
+}

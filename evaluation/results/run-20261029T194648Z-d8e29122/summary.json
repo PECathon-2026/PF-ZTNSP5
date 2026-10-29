@@ -1,0 +1,31 @@
+{
+  "mode": "controlled",
+  "all_passed": true,
+  "scenarios": [
+    {
+      "name": "feature",
+      "status": "VERIFYING",
+      "passed": true
+    },
+    {
+      "name": "bug",
+      "status": "VERIFYING",
+      "passed": true
+    },
+    {
+      "name": "recovery",
+      "status": "VERIFYING",
+      "passed": true
+    },
+    {
+      "name": "security",
+      "status": "VERIFYING",
+      "passed": true
+    },
+    {
+      "name": "unexpected",
+      "status": "VERIFYING",
+      "passed": true
+    }
+  ]
+}

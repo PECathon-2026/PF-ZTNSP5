@@ -33,7 +33,7 @@ async def get_health() -> HealthResponse:
     """
     settings = get_settings()
     docker_ready = check_docker_available()
-    model_ready = bool(settings.anthropic_base_url and settings.anthropic_api_key)
+    model_ready = settings.model_configured
 
     # Check active missions count
     db = get_database()

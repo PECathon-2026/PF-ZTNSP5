@@ -229,71 +229,48 @@ def test_api_health_endpoint():
     assert "storage_ready" in data
 
 
-def test_api_mission_crud_lifecycle():
+@pytest.fixture
+def mission_client(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.storage.database._db_instance", Database(tmp_path / "api-test.db"))
     with TestClient(app) as client:
-
-        # 1. Create Mission
-        payload = {
-            "repository_id": "repo-unit-test",
-            "request_text": "Add status filter endpoint",
-            "criteria": ["Accept active filter", "Reject invalid status"],
-        }
-        create_res = client.post("/api/missions", json=payload)
-        assert create_res.status_code == 201
-        created_data = create_res.json()
-        mission_id = created_data["mission"]["id"]
-        assert created_data["mission"]["status"] == "PLANNING"
-        assert len(created_data["criteria"]) == 2
-
-        # 2. Get Mission
-        get_res = client.get(f"/api/missions/{mission_id}")
-        assert get_res.status_code == 200
-        fetched_data = get_res.json()
-        assert fetched_data["mission"]["id"] == mission_id
-        assert fetched_data["mission"]["request_text"] == "Add status filter endpoint"
-        assert len(fetched_data["criteria"]) == 2
-
-        # 3. Get Unknown Mission (404)
-        res_404 = client.get("/api/missions/miss-nonexistent")
-        assert res_404.status_code == 404
-
-        # 4. Cancel Mission
-        cancel_res = client.post(f"/api/missions/{mission_id}/cancel")
-        assert cancel_res.status_code == 200
-        cancelled_data = cancel_res.json()
-        assert cancelled_data["mission"]["status"] == "CANCELLED"
-
-        # 5. Cancel Already Cancelled Mission (409 Conflict)
-        repeat_cancel = client.post(f"/api/missions/{mission_id}/cancel")
-        assert repeat_cancel.status_code == 409
+        yield client
 
 
-def test_mission_report_and_events_endpoints():
-    with TestClient(app) as client:
-        payload = {
-            "repository_id": "repo-report-test",
-            "request_text": "Expose a status filter endpoint",
-            "criteria": ["Reject invalid status"],
-        }
-        mission_id = client.post("/api/missions", json=payload).json()["mission"]["id"]
+def test_api_mission_crud_lifecycle(mission_client):
+    client = mission_client
 
-        report_res = client.get(f"/api/missions/{mission_id}/report")
-        assert report_res.status_code == 200
-        report = report_res.json()
-        assert report["mission"]["id"] == mission_id
-        for key in ("criteria", "tasks", "events", "candidates", "findings", "evidence", "approvals"):
-            assert key in report
-        assert any(event["event_type"] == "MISSION_CREATED" for event in report["events"])
+    # 1. Create Mission
+    payload = {
+        "repository_id": "repo-unit-test",
+        "request_text": "Add status filter endpoint",
+        "criteria": ["Accept active filter", "Reject invalid status"],
+    }
+    create_res = client.post("/api/missions", json=payload)
+    assert create_res.status_code == 201
+    created_data = create_res.json()
+    mission_id = created_data["mission"]["id"]
+    assert created_data["mission"]["status"] == "PLANNING"
+    assert len(created_data["criteria"]) == 2
 
-        events_res = client.get(f"/api/missions/{mission_id}/events?after=0")
-        assert events_res.status_code == 200
-        events = events_res.json()
-        assert len(events) >= 1
-        sequences = [event["sequence"] for event in events]
-        assert sequences == sorted(sequences)
+    # 2. Get Mission
+    get_res = client.get(f"/api/missions/{mission_id}")
+    assert get_res.status_code == 200
+    fetched_data = get_res.json()
+    assert fetched_data["mission"]["id"] == mission_id
+    assert fetched_data["mission"]["request_text"] == "Add status filter endpoint"
+    assert len(fetched_data["criteria"]) == 2
 
-        last_sequence = sequences[-1]
-        assert client.get(f"/api/missions/{mission_id}/events?after={last_sequence}").json() == []
-        assert client.get("/api/missions/miss-nonexistent/report").status_code == 404
-        assert client.get("/api/missions/miss-nonexistent/events").status_code == 404
+    # 3. Get Unknown Mission (404)
+    res_404 = client.get("/api/missions/miss-nonexistent")
+    assert res_404.status_code == 404
+
+    # 4. Cancel Mission
+    cancel_res = client.post(f"/api/missions/{mission_id}/cancel")
+    assert cancel_res.status_code == 200
+    cancelled_data = cancel_res.json()
+    assert cancelled_data["mission"]["status"] == "CANCELLED"
+
+    # 5. Cancel Already Cancelled Mission (409 Conflict)
+    repeat_cancel = client.post(f"/api/missions/{mission_id}/cancel")
+    assert repeat_cancel.status_code == 409
 

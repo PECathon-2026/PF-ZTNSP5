@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from uuid import uuid4
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MissionStatus(str, Enum):
@@ -47,13 +47,20 @@ class AcceptanceCriterion(BaseModel):
 
 
 class MissionBudgets(BaseModel):
-    max_repair_rounds: int = 3
-    repair_rounds_used: int = 0
-    max_time_seconds: int = 600
-    max_tool_calls: int = 50
-    tool_calls_used: int = 0
-    max_model_turns: int = 25
-    model_turns_used: int = 0
+    model_config = ConfigDict(extra="forbid", validate_default=True)
+    max_repair_rounds: int = Field(default=3, ge=0, le=3)
+    repair_rounds_used: int = Field(default=0, ge=0)
+    max_time_seconds: int = Field(default=600, ge=1, le=3600)
+    time_used_seconds: float = Field(default=0.0, ge=0)
+    max_tool_calls: int = Field(default=50, ge=1, le=500)
+    tool_calls_used: int = Field(default=0, ge=0)
+    max_model_turns: int = Field(default=25, ge=1, le=100)
+    model_turns_used: int = Field(default=0, ge=0)
+    max_tokens: int = Field(default=160000, ge=1, le=1000000)
+    input_tokens_used: int = Field(default=0, ge=0)
+    output_tokens_used: int = Field(default=0, ge=0)
+    max_clarifications: int = Field(default=3, ge=0, le=5)
+    clarifications_used: int = Field(default=0, ge=0)
 
 
 class Mission(BaseModel):
@@ -78,6 +85,7 @@ class CreateMissionRequest(BaseModel):
 
 
 class ClarificationAnswerRequest(BaseModel):
-    question_id: str
-    answer: str
+    model_config = ConfigDict(strict=True, extra="forbid", str_strip_whitespace=True)
+    question_id: str = Field(min_length=1, max_length=100)
+    answer: str = Field(min_length=1, max_length=4000)
 

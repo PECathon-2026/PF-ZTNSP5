@@ -18,6 +18,7 @@ from app.schemas.finding import Finding, FindingSeverity, FindingStatus
 from app.schemas.approval import Approval, ApprovalDecision
 from app.schemas.events import MissionEvent
 from app.settings import get_settings
+from app.security.redaction import redact_secrets
 
 
 SCHEMA_SQL = """
@@ -159,6 +160,30 @@ CREATE TABLE IF NOT EXISTS events (
     created_at TEXT NOT NULL,
     PRIMARY KEY(mission_id, sequence),
     FOREIGN KEY(mission_id) REFERENCES missions(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS guild_context (
+    mission_id TEXT PRIMARY KEY REFERENCES missions(id) ON DELETE CASCADE,
+    context_json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS guild_operations (
+    mission_id TEXT PRIMARY KEY REFERENCES missions(id) ON DELETE CASCADE,
+    token TEXT NOT NULL,
+    phase TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS clarifications (
+    id TEXT PRIMARY KEY,
+    mission_id TEXT NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
+    question TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    phase TEXT NOT NULL,
+    candidate_id TEXT NOT NULL,
+    candidate_fingerprint TEXT NOT NULL,
+    scope_version INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    answer TEXT,
+    created_at TEXT NOT NULL,
+    answered_at TEXT
 );
 """
 
@@ -407,6 +432,7 @@ class Database:
         evidence_list = evidence_ids or []
         async with aiosqlite.connect(self.db_path) as db:
             # Determine next sequence monotonically
+            await db.execute("BEGIN IMMEDIATE")
             cursor = await db.execute(
                 "SELECT COALESCE(MAX(sequence), 0) + 1 FROM events WHERE mission_id = ?",
                 (mission_id,),
@@ -429,7 +455,7 @@ class Database:
                     task_id,
                     candidate_id,
                     json.dumps(evidence_list),
-                    json.dumps(display_payload),
+                    redact_secrets(json.dumps(display_payload)),
                     now.isoformat(),
                 ),
             )
@@ -447,7 +473,7 @@ class Database:
                 created_at=now,
             )
 
-    async def get_events(self, mission_id: str, after_sequence: int = 0) -> list[MissionEvent]:
+    async def get_events(self, mission_id: str, after_sequence: int = 0, limit: int = 100) -> list[MissionEvent]:
         events: list[MissionEvent] = []
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
@@ -455,9 +481,9 @@ class Database:
                 """
                 SELECT * FROM events
                 WHERE mission_id = ? AND sequence > ?
-                ORDER BY sequence ASC
+                ORDER BY sequence ASC LIMIT ?
                 """,
-                (mission_id, after_sequence),
+                (mission_id, after_sequence, min(max(limit, 1), 100)),
             )
             rows = await cursor.fetchall()
             for row in rows:
