@@ -85,6 +85,28 @@ test("landing and mobile setup remain usable without horizontal overflow", async
   expect(errors).toEqual([]);
 });
 
+test("credential re-entry has usable input widths on desktop and mobile", async ({ page }) => {
+  await backend(page, "PLANNING");
+  await page.route("**/api/backend/missions/miss-current", route => route.fulfill({
+    contentType: "application/json", body: JSON.stringify({ ...fixture("miss-current", "PLANNING"), own_api_key: true, api_key_ready: false }),
+  }));
+  await page.goto("/missions/miss-current/workspace");
+  const form = page.locator(".model-connection-form");
+  const url = page.getByLabel("Mission model base URL");
+  const key = page.getByLabel("Mission API key");
+  await expect(form).toBeVisible();
+  expect((await url.boundingBox())!.width).toBeGreaterThan(240);
+  expect((await key.boundingBox())!.width).toBeGreaterThan(240);
+  const actions = await form.locator(".connection-actions").boundingBox();
+  const keyBox = (await key.boundingBox())!;
+  expect(actions!.y).toBeGreaterThanOrEqual(keyBox.y + keyBox.height);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(url).toBeVisible();
+  expect((await url.boundingBox())!.width).toBeGreaterThan(260);
+  expect((await key.boundingBox())!.y).toBeGreaterThan((await url.boundingBox())!.y);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+});
+
 test("IDE displays code and agent history remains separate across missions", async ({ page }) => {
   const browserErrors: string[] = [];
   page.on("pageerror", error => browserErrors.push(error.message));

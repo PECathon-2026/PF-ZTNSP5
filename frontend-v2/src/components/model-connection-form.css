@@ -1,0 +1,67 @@
+.action-banner:has(.model-connection-form) {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(0, 1.5fr);
+  align-items: start;
+  gap: 28px;
+}
+
+.action-banner .model-connection-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.model-connection-form .connection-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.model-connection-form label {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.model-connection-form input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  flex: none;
+}
+
+.model-connection-form .connection-actions,
+.model-connection-form .connection-feedback {
+  grid-column: 1 / -1;
+}
+
+.model-connection-form .connection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.model-connection-form .connection-feedback:empty {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .action-banner:has(.model-connection-form) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .action-banner .model-connection-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .model-connection-form .connection-actions .button {
+    flex: 1 1 100%;
+  }
+}

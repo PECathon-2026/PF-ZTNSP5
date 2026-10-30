@@ -298,7 +298,11 @@ class RecoveryService:
         criteria = await self.db.get_criteria(mission_id)
         token = uuid4().hex
         holder = "RECOVERY:" + token
-        self.ws.acquire_writer_lease(mission_id, holder)
+        from app.services.workspace_service import WriterLeaseError
+        try:
+            self.ws.acquire_writer_lease(mission_id, holder)
+        except WriterLeaseError:
+            raise GuildConflict("Another operation already owns this workspace; refresh recovery") from None
         try:
             async with self.store.transaction() as db:
                 await self._cas(db, mission, context)
