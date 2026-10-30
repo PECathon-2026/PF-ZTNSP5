@@ -33,6 +33,9 @@ After the FINAL edit of EACH changed file, read it back and inspect read_diff.
 Then call submit_candidate ALONE to hand off your work. Prose alone is not completion.
 This slice verifies file changes only, not behavioral tests or acceptance criteria;
 do not claim tests passed, independent verification, approval, or application.
+Any readonly_acceptance_tests in the task are human-reviewed checks provided
+separately by the runner. Read their content from the task context; do not create,
+change or search for those test files in the source workspace.
 If a tool fails, inspect the error and correct the request within the bounded budget.
 """
 
@@ -46,6 +49,17 @@ class SamuraiConfig(BaseModel):
     max_consecutive_errors: int = Field(default=3, ge=1, le=10)
     max_context_chars: int = Field(default=250000, ge=1000, le=1000000)
     max_tool_result_chars: int = Field(default=20000, ge=1000, le=100000)
+
+    @classmethod
+    def for_mission(cls, budgets):
+        """Use remaining authorized tokens, rather than an invisible 60k default."""
+        from app.services.budgets import BudgetExceeded
+        turns = budgets.max_model_turns - budgets.model_turns_used
+        tools = budgets.max_tool_calls - budgets.tool_calls_used
+        tokens = budgets.max_tokens - budgets.input_tokens_used - budgets.output_tokens_used
+        if min(turns, tools, tokens) <= 0:
+            raise BudgetExceeded("Mission has no remaining model, tool or reported-token allowance")
+        return cls(max_turns=min(20, turns), max_tool_calls=min(50, tools), max_tokens=min(500000, tokens))
 
 
 class ToolTrace(BaseModel):
@@ -67,6 +81,9 @@ class SamuraiResult(BaseModel):
     output_tokens: int = 0
     duration_ms: int = 0
     trace: list[ToolTrace] = Field(default_factory=list)
+    exhausted_budget: str | None = None
+    budget_used: float | None = None
+    budget_limit: float | None = None
 
 
 class SamuraiRunner:
@@ -89,6 +106,7 @@ class SamuraiRunner:
     async def run(
         self, repository_id: str, request_text: str, *, mission_id: str | None = None,
         prepared_workspace: bool = False, parent_candidate: Candidate | None = None,
+        recover_existing_changes: bool = False,
     ) -> SamuraiResult:
         """Run once; cancellation propagates and always releases this run's lease.
 
@@ -120,10 +138,10 @@ class SamuraiRunner:
             else:
                 workspace = self.workspaces.create_disposable_workspace(mission_id, repository_id)
             async with asyncio.timeout(self.config.max_seconds):
-                await self._loop(result, workspace, repository_id, request_text, holder, parent_candidate)
+                inherited = parent_candidate.changed_files if recover_existing_changes and parent_candidate else []
+                await self._loop(result, workspace, repository_id, request_text, holder, parent_candidate, inherited)
         except TimeoutError:
-            result.status = "BUDGET_EXHAUSTED"
-            result.summary = "Samurai exceeded its wall-clock budget."
+            self._exhausted(result, "elapsed_seconds", round(monotonic() - started, 1), self.config.max_seconds)
         except ModelAdapterError as exc:
             result.summary = str(exc)
         except (WriterLeaseError, FileExistsError):
@@ -136,25 +154,36 @@ class SamuraiRunner:
             result.duration_ms = int((monotonic() - started) * 1000)
         return result
 
-    async def _loop(self, result, workspace, repository_id, request_text, holder, parent_candidate=None):
+    async def _loop(self, result, workspace, repository_id, request_text, holder, parent_candidate=None, inherited_changes=()):
         cfg = self.config
         baseline = self.workspaces.get_baseline_dir(result.mission_id)
         fingerprint, _ = self.workspaces._compute_dir_hash(workspace)
         messages: list[dict[str, Any]] = [{"role": "user", "content": request_text}]
         # State below is local to a run, not shared by concurrent missions.
         read_before: set[str] = set()
-        modified: set[str] = set()
-        read_back: set[str] = set()
+        modified: set[str] = set(inherited_changes)
+        read_back: set[str] = {path for path in inherited_changes if not (workspace / path).exists()}
         inspected: set[str] = set()
         replay: dict[str, tuple[str, dict[str, Any]]] = {}
         consecutive_errors = 0
+        if inherited_changes:
+            messages[0]["content"] += (
+                "\nRecovery checkpoint: these existing changes are UNVERIFIED: " + json.dumps(list(inherited_changes)) +
+                ". Inspect them against the task. Read back every existing changed file and inspect every changed diff "
+                "before submit_candidate, even when no additional edit is needed. Do not replay old patches.")
 
         for turn in range(1, cfg.max_turns + 1):
-            if len(json.dumps(messages)) > cfg.max_context_chars:
-                break
+            context_size = len(json.dumps(messages))
+            if context_size > cfg.max_context_chars:
+                self._exhausted(result, "context_chars", context_size, cfg.max_context_chars)
+                return
             result.model_turns = turn
             try:
-                response = await self.adapter.chat(SYSTEM_PROMPT, messages, samurai_tools())
+                prompt = (SYSTEM_PROMPT + f"\nThis task has {cfg.max_turns - turn + 1} model turns remaining "
+                          f"including this call, and {cfg.max_tool_calls - result.tool_calls} tool calls. "
+                          "Reserve a model turn for submit_candidate after final read-back and diff inspection. "
+                          "Independent read_file and read_diff inspections can be requested together in one turn.")
+                response = await self.adapter.chat(prompt, messages, samurai_tools())
             except ModelProtocolError:
                 consecutive_errors += 1
                 if consecutive_errors >= cfg.max_consecutive_errors:
@@ -164,7 +193,8 @@ class SamuraiRunner:
             result.input_tokens += response.input_tokens
             result.output_tokens += response.output_tokens
             if result.input_tokens + result.output_tokens >= cfg.max_tokens:
-                break
+                self._exhausted(result, "reported_tokens", result.input_tokens + result.output_tokens, cfg.max_tokens)
+                return
             if not response.tool_calls:
                 result.summary = "Model stopped without a structured candidate handoff."
                 return
@@ -181,12 +211,11 @@ class SamuraiRunner:
             })
             tool_results = []
             for call in response.tool_calls:
+                if result.tool_calls >= cfg.max_tool_calls:
+                    self._exhausted(result, "tool_calls", result.tool_calls, cfg.max_tool_calls)
+                    return
                 if self.before_tool:
                     await self.before_tool()
-                if result.tool_calls >= cfg.max_tool_calls:
-                    result.status = "BUDGET_EXHAUSTED"
-                    result.summary = "Samurai exhausted its tool-call budget."
-                    return
                 result.tool_calls += 1
                 signature = json.dumps([call.name, call.arguments], sort_keys=True)
                 status = "SUCCEEDED"
@@ -306,8 +335,19 @@ class SamuraiRunner:
                     return
             messages.append({"role": "user", "content": tool_results})
 
+        self._exhausted(result, "model_turns", result.model_turns, cfg.max_turns)
+
+    @staticmethod
+    def _exhausted(result, dimension, used, limit):
         result.status = "BUDGET_EXHAUSTED"
-        result.summary = "Samurai exhausted its turn, token, or context budget."
+        result.exhausted_budget = dimension
+        result.budget_used = used
+        result.budget_limit = limit
+        name = dimension.replace("_", " ")
+        advice = ("Use a narrower request and smaller file reads in a new mission."
+                  if dimension == "context_chars" else
+                  "Use a narrower request or explicitly select a larger budget for a new mission.")
+        result.summary = f"Samurai {name} budget exhausted ({used:g}/{limit:g} in this task). {advice}"
 
     def _bounded_result(self, output: dict[str, Any]) -> dict[str, Any]:
         serialized = json.dumps(output)

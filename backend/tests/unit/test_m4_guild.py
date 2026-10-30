@@ -71,7 +71,8 @@ class ScriptedGuildModel:
             else:
                 calls = [tool("submit_candidate", {"summary": "Source ready"}, "dev-submit")]
         else:
-            if turn == 1:
+            review_turn = sum(message["role"] == "assistant" for message in body["messages"]) + 1
+            if review_turn == 1:
                 calls = [tool("read_file", {"relative_path": "app.py"}, "review-read"), tool("read_diff", {"relative_path": "app.py"}, "review-diff")]
             else:
                 context = json.loads(body["messages"][0]["content"])
@@ -502,3 +503,35 @@ def test_artifact_redacts_configured_backend_credentials(tmp_path, monkeypatch):
     artifacts = ArtifactStorage(tmp_path)
     artifact_id, _ = artifacts.save_artifact("miss-test", "stdout.txt", "key=synthetic-backend-key")
     assert artifacts.read_artifact("miss-test", artifact_id) == "key=[REDACTED]"
+
+
+@pytest.mark.asyncio
+async def test_sentinel_and_shadow_council_are_both_running_on_frozen_candidate(guild):
+    controller, mission, model, executor, _ = guild
+    await (await controller.start(mission.id, "plan"))
+    check_started, review_started, release = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    original_check, original_model = executor.run, model.respond
+
+    async def held_check(*args):
+        check_started.set()
+        await release.wait()
+        return await original_check(*args)
+
+    async def held_review(request):
+        if "You are SHADOW_COUNCIL" in json.loads(request.content)["system"]:
+            review_started.set()
+            await release.wait()
+        return original_model(request)
+
+    executor.run = held_check
+    model.respond = held_review
+    job = await controller.start(mission.id, "execute", 1)
+    try:
+        await asyncio.wait_for(asyncio.gather(check_started.wait(), review_started.wait()), 8)
+        tasks = await controller.db.get_tasks(mission.id)
+        assert {t.owner_agent for t in tasks if t.status == TaskStatus.RUNNING} == {"SENTINEL", "SHADOW_COUNCIL"}
+        assert (await controller.db.get_mission(mission.id)).status == MissionStatus.CHECKING
+    finally:
+        release.set()
+        await job
+    assert (await controller.db.get_mission(mission.id)).status == MissionStatus.REPAIRING

@@ -140,7 +140,7 @@ class ScriptedModel:
                          _call("read_diff", {"relative_path": self.scenario.file}, "review-diff")]
             else:
                 findings = []
-                if self.scenario.name == "security" and self.review_runs == 1:
+                if self.scenario.name == "security" and self.developer_runs == 1:
                     findings = [{"severity": "BLOCKING", "title": "Shell injection via os.system", "description": "Untrusted input still reaches the shell",
                                  "observed_behavior": "os.system accepts an untrusted command", "expected_behavior": "Allowlist and shell-free subprocess",
                                  "file_path": self.scenario.file, "evidence_ids": [context["evidence"][0]["id"]]}]

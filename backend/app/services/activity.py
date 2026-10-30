@@ -19,11 +19,11 @@ def tool_activity(role: str, tool: str, stage: str, *, path: str | None = None,
                   count: int | None = None, mode: str | None = None,
                   task_title: str | None = None, candidate_fingerprint: str | None = None) -> dict:
     """Render a bounded activity item. Only validated relative paths are accepted."""
-    if role not in {"SHOGUN", "SAMURAI", "SHADOW_COUNCIL"} or stage not in {"intent", "outcome", "failed"}:
+    if role not in {"SHOGUN", "SAMURAI", "SENTINEL", "SHADOW_COUNCIL"} or stage not in {"intent", "outcome", "failed"}:
         raise ValueError("Invalid activity source or stage")
     if path and (path.startswith(("/", "\\")) or ".." in path.split("/")):
         path = None
-    agent = {"SHOGUN": "Shogun", "SAMURAI": "Samurai", "SHADOW_COUNCIL": "Shadow Council"}[role]
+    agent = {"SHOGUN": "Shogun", "SAMURAI": "Samurai", "SENTINEL": "Sentinel", "SHADOW_COUNCIL": "Shadow Council"}[role]
     target = f" `{safe_label(path, 180)}`" if path else ""
     task = f" for {safe_label(task_title, 120)}" if task_title else ""
     if stage == "failed":

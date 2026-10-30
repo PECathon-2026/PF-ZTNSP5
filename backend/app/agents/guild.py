@@ -9,7 +9,8 @@ from pydantic import ValidationError
 
 from app.agents.model_adapter import ModelAdapterError, ModelProtocolError, ToolDefinition
 from app.agents.tool_contracts import TOOL_CONTRACTS
-from app.schemas.guild import GuildPlan, ReviewReport, RepairPlan, ClarificationProposal
+from app.schemas.guild import GuildPlan, ReviewReport, RepairPlan, ClarificationProposal, AcceptanceTestProposal
+from app.services.acceptance_tests import validate_proposal
 from app.services.budgets import BudgetExceeded
 from app.schemas.candidate import CandidateState
 from app.schemas.evidence import Evidence, EvidenceKind
@@ -25,7 +26,7 @@ from app.services.activity import tool_activity
 
 @dataclass
 class RoleResult:
-    proposal: GuildPlan | ReviewReport | ClarificationProposal
+    proposal: GuildPlan | ReviewReport | ClarificationProposal | AcceptanceTestProposal
     model_turns: int
     tool_calls: int
 
@@ -143,7 +144,7 @@ class ShogunRunner(ReadOnlyRunner):
         "(one or more existing pytest node IDs); a test may support several criteria. "
         "Unmapped criteria cannot pass independent verification; report missing coverage rather than inventing node IDs. "
         "For missing tests, include a test_gaps proposal with expected behavior and a suggested test name. "
-        "Only a human may accept/add those tests to the original repository before starting a new mission. "
+        "A separate Sentinel test designer can propose missing acceptance tests for human review. "
         "Do not create Sentinel or reviewer tasks; the controller adds them. Do not edit files or execute checks. "
         "If the request is ambiguous or blocked on a user decision, call request_clarification instead of guessing. "
         "Use supplied clarification answers; do not repeat an already answered question."
@@ -175,6 +176,27 @@ class RepairPlanner(ShogunRunner):
             raise ValueError("Repair cannot change the authorized criteria or checks")
         if set(proposal.finding_ids) != {f["id"] for f in context["findings"]}:
             raise ValueError("Repair must address exactly the current blocking findings")
+
+
+class AcceptanceTestDesigner(ReadOnlyRunner):
+    role = "SENTINEL"
+    terminal_tool = "submit_acceptance_tests"
+    schema = AcceptanceTestProposal
+    required_tools = {"read_file"}
+    allowed_tools = {"list_files", "read_file"}
+    instruction = (
+        "Read the existing source and tests, then propose small pytest acceptance tests for the provided missing criteria. "
+        "Do not modify repository files. Return test code only in the structured submission. The human must review it "
+        "before any of it runs. New filenames must be test_kage_<name>.py, at the repository root. "
+        "Use top-level test_ functions with meaningful assertions. Match every missing criterion description EXACTLY "
+        "once in mappings, referencing test nodes you actually define. Preserve original tests. "
+        "Prefer portable stdlib/pytest tests. Imports of newly requested code should happen INSIDE test functions "
+        "so the baseline can collect tests before that new code exists. Do not test implementation formatting. "
+        "For a script's output, invoke it using sys.executable and inspect captured output inside the container."
+    )
+
+    def validate(self, proposal, context, directory):
+        validate_proposal(proposal, directory, context["missing_criteria"])
 
 
 class ShadowCouncilRunner(ReadOnlyRunner):
@@ -223,8 +245,8 @@ class SentinelRunner:
         self.before_tool = before_tool
         self.on_activity = on_activity
 
-    async def run(self, candidate, profiles, *, baseline=False, criteria=(), contract_hash=None):
-        directory = self.workspaces.get_candidate_dir(candidate.mission_id, candidate.id)
+    async def run(self, candidate, profiles, *, baseline=False, criteria=(), contract_hash=None, check_directory=None):
+        directory = check_directory or self.workspaces.get_candidate_dir(candidate.mission_id, candidate.id)
         self.workspaces.validate_candidate(candidate)
         result = SentinelResult()
         checks = [(profile, None, None) for profile in sorted(set(profiles))]

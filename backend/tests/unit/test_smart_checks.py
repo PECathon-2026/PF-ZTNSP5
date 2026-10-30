@@ -183,8 +183,11 @@ async def test_surviving_variant_changes_review_and_routes_repair(guild, monkeyp
             for block in payload["content"]:
                 if block.get("name") == "submit_review":
                     evidence = json.loads(json.loads(request.content)["messages"][0]["content"])["evidence"]
-                    challenge = next(item for item in evidence if item["kind"] == "MUTATION")
-                    block["input"]["findings"][0]["evidence_ids"] = [challenge["id"]]
+                    challenge = next((item for item in evidence if item["kind"] == "MUTATION"), None)
+                    if challenge:
+                        block["input"]["findings"][0]["evidence_ids"] = [challenge["id"]]
+                    else:
+                        block["input"]["findings"] = []
         return httpx.Response(200, json=payload)
 
     model.respond = review_cites_challenge
@@ -199,7 +202,7 @@ async def test_surviving_variant_changes_review_and_routes_repair(guild, monkeyp
 
 
 @pytest.mark.asyncio
-async def test_real_pipeline_blocks_missing_tests_before_authorized_edit(guild):
+async def test_real_pipeline_proposes_missing_tests_before_authorized_edit(guild):
     controller, mission, model, _, repo = guild
 
     class FakeContainer(ContainerExecutor):
@@ -211,13 +214,33 @@ async def test_real_pipeline_blocks_missing_tests_before_authorized_edit(guild):
                     "command": ["docker", "pytest"]}
 
     controller.executor = FakeContainer()
+    original = model.respond
+
+    def with_designer(request):
+        body = json.loads(request.content)
+        if not any(t["name"] == "submit_acceptance_tests" for t in body["tools"]):
+            return original(request)
+        from tests.unit.test_m4_guild import tool
+        if len(body["messages"]) == 1:
+            calls = [tool("read_file", {"relative_path": "app.py"}, "design-read")]
+        else:
+            calls = [tool("submit_acceptance_tests", {"summary": "Check the new value",
+                "files": [{"path": "test_kage_value.py", "content": "def test_value_two():\n    from app import value\n    assert value == 2\n"}],
+                "mappings": [{"criterion_description": "Return value 2", "test_selectors": ["test_kage_value.py::test_value_two"]}]}, "design-submit")]
+        return httpx.Response(200, json={"content": calls, "stop_reason": "tool_use", "usage": {"input_tokens": 1, "output_tokens": 1}})
+
+    model.respond = with_designer
     model.plan["test_gaps"] = [{"criterion_description": "Return value 2", "expected_behavior": "Value 2 is returned",
                                 "suggested_test": "test_value_two", "rationale": "No accepted test has been mapped"}]
     await (await controller.start(mission.id, "plan"))
     state = await controller.db.get_mission(mission.id)
-    assert state.status == MissionStatus.BLOCKED
+    assert state.status == MissionStatus.READY_FOR_AUTHORIZATION, state.failure_reason
     context = await controller.store.context(mission.id)
     assert context["test_gaps"] == ["Return value 2"]
     assert context["test_gap_proposals"][0]["suggested_test"] == "test_value_two"
+    assert context["acceptance_tests"]["accepted"] is False
+    from app.storage.guild import GuildConflict
+    with pytest.raises(GuildConflict, match="human review"):
+        await controller.start(mission.id, "execute", 1)
     assert model.turns.get("SAMURAI", 0) == 0
     assert (repo / "app.py").read_text() == "value = 1\n"

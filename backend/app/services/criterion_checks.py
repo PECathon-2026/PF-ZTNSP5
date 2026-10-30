@@ -63,16 +63,20 @@ def planned_selectors(criterion):
     return sorted(set(criterion.test_selectors + ([criterion.test_selector] if criterion.test_selector else [])))
 
 
-def verification_contract_hash(directory, criteria):
+def verification_contract_hash(directory, criteria, extra_files=None):
     from app.tools.files import list_files
     from app.services.test_reports import object_hash
-    tests = []
+    tests = {}
     for relative in list_files(directory):
         path = Path(relative)
         if (path.name.startswith("test_") or path.name.endswith("_test.py") or path.name in
                 {"conftest.py", "pyproject.toml", "pytest.ini", "setup.cfg", "tox.ini"}):
             safe = canonicalize_and_validate_path(directory, relative)
-            tests.append((relative, hashlib.sha256(safe.read_bytes()).hexdigest()))
-    return object_hash({"version": 1, "tests": tests, "criteria": [
+            tests[relative] = hashlib.sha256(safe.read_bytes()).hexdigest()
+    for relative, content in (extra_files or {}).items():
+        if relative in tests or (directory / relative).exists():
+            raise ValueError("Accepted test file collides with candidate")
+        tests[relative] = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    return object_hash({"version": 1, "tests": sorted(tests.items()), "criteria": [
         {"id": c.id, "description": c.description, "method": c.verification_method, "version": c.criteria_version}
         for c in criteria]})

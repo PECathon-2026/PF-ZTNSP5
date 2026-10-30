@@ -27,16 +27,17 @@ class BudgetMeter:
     def _check(self):
         budgets = self.mission.budgets
         if self.elapsed() >= budgets.max_time_seconds:
-            raise BudgetExceeded("Mission active-time budget exhausted")
+            raise BudgetExceeded(f"Mission active-time budget exhausted ({self.elapsed():.1f}/{budgets.max_time_seconds} seconds)")
         if budgets.input_tokens_used + budgets.output_tokens_used >= budgets.max_tokens:
-            raise BudgetExceeded("Mission reported-token budget exhausted")
+            used = budgets.input_tokens_used + budgets.output_tokens_used
+            raise BudgetExceeded(f"Mission reported-token budget exhausted ({used}/{budgets.max_tokens} tokens)")
 
     async def before_model(self):
         async with self.lock:
             self._check()
             budgets = self.mission.budgets
             if budgets.model_turns_used >= budgets.max_model_turns:
-                raise BudgetExceeded("Mission model-turn budget exhausted")
+                raise BudgetExceeded(f"Mission model-turn budget exhausted ({budgets.model_turns_used}/{budgets.max_model_turns} turns)")
             # Reserve before sending: errors/cancellation do not refund an attempted turn.
             budgets.model_turns_used += 1
             await self._save()
@@ -53,7 +54,7 @@ class BudgetMeter:
             self._check()
             budgets = self.mission.budgets
             if budgets.tool_calls_used >= budgets.max_tool_calls:
-                raise BudgetExceeded("Mission tool-call budget exhausted")
+                raise BudgetExceeded(f"Mission tool-call budget exhausted ({budgets.tool_calls_used}/{budgets.max_tool_calls} calls)")
             budgets.tool_calls_used += 1
             await self._save()
 

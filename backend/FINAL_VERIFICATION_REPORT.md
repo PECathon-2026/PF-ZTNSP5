@@ -20,7 +20,7 @@ The first synthetic run (`miss-66e8bf5f`) reached `BUDGET_EXHAUSTED` after build
 
 | Check | Observed |
 | --- | --- |
-| Backend unit/integration tests | 193 passed, one dependency deprecation warning (`python -m pytest tests/unit -q`) |
+| Backend unit/integration tests | 256 passed, one dependency deprecation warning (`python -m pytest tests/unit -q --junitxml=data/save-into-original-regression.xml`) |
 | Criterion-specific Docker check | `test_metrics.py::test_average`: exit 0, 1 passed, restricted container |
 | Multi-file apply | Modification + addition + deletion, conflict rejection, rollback after a write failure and after interrupted startup: tests pass on synthetic repositories |
 | M8 live evaluation | All five real-model/Docker scenario runs passed; `evaluation/results/run-20261029T200847Z-c8bec9cb/summary.json` |
@@ -53,9 +53,26 @@ approved. The latest JSON/Markdown evidence is available at
 `GET /api/missions/miss-b186039f/proof` and in ignored local storage
 `backend/data/demos/unfamiliar-miss-b186039f.json`.
 
-Current verification: **193 backend tests**, **6 frontend tests**, TypeScript
-typecheck and Next.js production build pass. See
-`backend/data/cli-regression.xml` and `backend/INNOVATION_STATUS.md`.
+Current backend verification: **256 backend tests** (including the test-review,
+concurrent-check, persistent-input and linked-follow-up regression cases). Earlier **6 frontend tests**, TypeScript
+typecheck and Next.js production build are prior observations, not new runs.
+See `backend/data/save-into-original-regression.xml` and `backend/INNOVATION_STATUS.md`.
+
+## Current intake and parallel-review change
+
+The CLI now treats success criteria as optional: Enter asks Shogun to propose
+them; manual entry requires `/manual` and a `KEEP` confirmation. Sentinel's
+proposed missing checks are shown in full, including mappings and a hash, and
+require `ACCEPT TESTS <hash>` *before* the separate `AUTHORIZE` gate. The approved
+test code remains outside the candidate and executes only in temporary
+verification views. On a frozen candidate, Sentinel checks and Shadow Council's
+preliminary source review run concurrently; significant check findings trigger
+a second informed review. Backend regression: **256 passed**. A live CLI mission
+on `sample-repos/bug` with no manually supplied criteria reached the reviewed
+test proposal gate and stopped before source authorization when stdin closed;
+its proposal includes checks for the new `umang.py` example. That observation
+does not demonstrate a live full execution of the new flow, which awaits a
+person's review of the proposed assertions and authorization.
 
 ## Backend CLI terminal walkthrough
 
@@ -72,6 +89,19 @@ The CLI displayed the unified diff. The original fixture was not modified and
 no human approval or apply request was made. Replay from another terminal with
 `python -m app.cli watch miss-05bc0e01 --after 42`; inspect the proof card with
 `python -m app.cli proof miss-05bc0e01 --format markdown`.
+
+### Boxed terminal renderer
+
+Interactive `python -m app.cli` now opens a Rich/prompt_toolkit KAGE dashboard with current
+agent highlighting, observed handoffs, persisted activity summaries and mission
+budget counters. Plans, test proposals and diffs remain in a paged review pane
+while the input field stays anchored at the bottom. `--plain` and redirected output retain the text CLI.
+The renderer was checked at wide/narrow widths, with long messages, duplicate
+events, terminal control characters, pending approvals and input pause/resume;
+the earlier suite includes these checks; the persistent input and review pane
+were checked with prompt_toolkit pipe-input tests. A static dashboard rendering was
+also exercised against the recorded `miss-05bc0e01` events, rather than invented
+mission activity. This is terminal-renderer validation, not a browser walkthrough.
 
 ## Remaining boundaries
 

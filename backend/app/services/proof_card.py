@@ -30,6 +30,10 @@ def proof_card(detail, context, events):
             "plan_revisions": context.get("plan_history", []),
             "test_gaps": context.get("test_gaps", []),
             "test_gap_proposals": context.get("test_gap_proposals", []),
+            "reviewed_acceptance_tests": {"proposal_hash": context["acceptance_tests"]["hash"],
+                                           "accepted": context["acceptance_tests"].get("accepted", False),
+                                           "files": [file["path"] for file in context["acceptance_tests"]["proposal"]["files"]]}
+                                           if context.get("acceptance_tests") else None,
             "causal_links": links[:200],
             "criteria": [{"id": c.id, "description": safe_label(c.description, 500), "status": c.status.value,
                           "method": c.verification_method, "evidence_ids": c.evidence_ids}

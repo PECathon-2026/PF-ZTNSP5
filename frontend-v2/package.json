@@ -1,0 +1,32 @@
+{
+  "name": "kage-workspace-v2",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "postinstall": "node scripts/prepare-editor.mjs",
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:browser": "playwright test"
+  },
+  "overrides": { "dompurify": "3.4.17" },
+  "dependencies": {
+    "@monaco-editor/react": "4.7.0",
+    "@xyflow/react": "12.12.0",
+    "lucide-react": "^0.468.0",
+    "monaco-editor": "0.52.2",
+    "next": "16.4.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.9.0"
+  }
+}

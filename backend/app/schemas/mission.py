@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from uuid import uuid4
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 
 class MissionStatus(str, Enum):
@@ -78,10 +78,23 @@ class Mission(BaseModel):
     failure_reason: str | None = None
 
 
+class MissionLimits(BaseModel):
+    """User-selected ceilings for a NEW mission; usage counters are never inputs."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    max_model_turns: int = Field(default=25, ge=1, le=100)
+    max_tool_calls: int = Field(default=50, ge=1, le=500)
+    max_tokens: int = Field(default=160000, ge=1, le=1000000)
+    max_time_seconds: int = Field(default=600, ge=1, le=3600)
+
+
 class CreateMissionRequest(BaseModel):
     repository_id: str
     request_text: str
     criteria: list[str] = Field(default_factory=list)
+    limits: MissionLimits = Field(default_factory=MissionLimits)
+    api_key: SecretStr | None = Field(default=None, repr=False, exclude=True)
+    base_url: str | None = Field(default=None, max_length=2048, repr=False, exclude=True)
 
 
 class ClarificationAnswerRequest(BaseModel):

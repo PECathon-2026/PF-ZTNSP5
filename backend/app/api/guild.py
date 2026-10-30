@@ -5,7 +5,7 @@ from app.api.missions import MissionDetailResponse, get_mission
 from app.schemas.candidate import Candidate
 from app.schemas.evidence import Evidence
 from app.schemas.finding import Finding
-from app.schemas.guild import AuthorizeGuildRequest
+from app.schemas.guild import AuthorizeGuildRequest, AcceptanceTestDecision
 from app.schemas.mission import ClarificationAnswerRequest
 from app.schemas.approval import ApprovalRequest, ApplyPatchRequest
 from app.services.approval_service import ApprovalService
@@ -14,8 +14,32 @@ from app.services.guild_service import get_guild_controller
 from app.storage.guild import GuildConflict
 from app.tools.files import read_file
 from app.services.proof_card import proof_card, proof_markdown
+from pydantic import BaseModel, SecretStr, Field
+from app.services.mission_credentials import set_mission_key
+from app.api.credential_route import CredentialSafeRoute
 
-router = APIRouter(prefix="/api/missions", tags=["Guild"])
+router = APIRouter(prefix="/api/missions", tags=["Guild"], route_class=CredentialSafeRoute)
+
+
+class MissionKeyRequest(BaseModel):
+    api_key: SecretStr = Field(repr=False, exclude=True)
+    base_url: str | None = Field(default=None, max_length=2048, repr=False, exclude=True)
+
+
+@router.post("/{mission_id}/credentials", response_model=MissionDetailResponse)
+async def update_mission_key(mission_id: str, request: MissionKeyRequest):
+    await get_mission(mission_id)
+    controller = get_guild_controller()
+    if mission_id in controller.jobs:
+        raise HTTPException(status_code=409, detail="Wait for active model work to finish before changing its key.")
+    context = await controller.store.context(mission_id) or {}
+    if not context.get("own_api_key"):
+        raise HTTPException(status_code=409, detail="Create a new mission with Use my API key enabled.")
+    try:
+        set_mission_key(mission_id, request.api_key.get_secret_value(), request.base_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    return await get_mission(mission_id)
 
 
 @router.get("/{mission_id}/proof")
@@ -99,6 +123,17 @@ async def answer_clarification(mission_id: str, request: ClarificationAnswerRequ
     except KeyError:
         raise HTTPException(status_code=404, detail="Mission or clarification not found") from None
     except GuildConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    return await get_mission(mission_id)
+
+
+@router.post("/{mission_id}/acceptance-tests/review", response_model=MissionDetailResponse)
+async def review_acceptance_tests(mission_id: str, request: AcceptanceTestDecision):
+    try:
+        await get_guild_controller().review_tests(mission_id, request)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Mission not found") from None
+    except (GuildConflict, ValueError) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from None
     return await get_mission(mission_id)
 

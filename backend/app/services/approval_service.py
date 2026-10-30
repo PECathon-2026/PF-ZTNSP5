@@ -1,5 +1,6 @@
 """M6 trusted approval and guarded application; never executes repository code."""
 
+import asyncio
 from app.schemas.approval import Approval, ApprovalDecision
 from app.schemas.candidate import Candidate, CandidateState
 from app.schemas.mission import MissionStatus
@@ -13,6 +14,7 @@ from app.services.activity import safe_label
 from app.services.criterion_checks import verification_contract_hash
 from app.services.test_reports import object_hash
 from app.schemas.evidence import EvidenceKind
+from app.services.acceptance_tests import test_files
 import json
 
 
@@ -34,7 +36,7 @@ class ApprovalService:
     async def _evaluate(self, mission, candidate, context):
         criteria = await self.controller.db.get_criteria(mission.id)
         directory = self.controller.workspaces.get_candidate_dir(mission.id, candidate.id)
-        contract = verification_contract_hash(directory, criteria)
+        contract = verification_contract_hash(directory, criteria, test_files(context))
         evidence = await self.store.records(Evidence, mission.id)
         for item in evidence:
             if item.metadata.get("report"):
@@ -62,6 +64,10 @@ class ApprovalService:
         token = await self.store.claim_verification(mission_id)
         try:
             mission, candidate = await self._candidate(mission_id, mission.active_candidate_id)
+            await self.controller.db.emit_event(mission_id, "VERIFIER_STARTED", "VERIFIER", {
+                "stage": "intent", "summary": "Independent verifier is checking recorded test and review evidence for the frozen candidate.",
+                "status": MissionStatus.VERIFYING.value,
+            }, candidate_id=candidate.id)
             self.controller.workspaces.validate_candidate(candidate)
             context = await self.store.context(mission_id)
             if not context or candidate.criteria_version != mission.scope_version:
@@ -78,6 +84,11 @@ class ApprovalService:
                 "candidate_fingerprint": candidate.content_fingerprint,
             }, candidate_id=candidate.id, evidence_ids=[item for criterion in criteria for item in criterion.evidence_ids])
             return await self.controller.db.get_mission(mission_id)
+        except (Exception, asyncio.CancelledError):
+            await self.controller.db.emit_event(mission_id, "VERIFIER_ERROR", "VERIFIER", {
+                "stage": "failed", "summary": "Independent verification stopped before a verdict; the candidate is not approved.",
+            }, candidate_id=mission.active_candidate_id)
+            raise
         finally:
             await self.store.release(mission_id, token)
 

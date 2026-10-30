@@ -50,6 +50,9 @@ async def test_verify_approve_apply_single_file_and_no_replay(recovery):
     controller, mission, repo, service, candidate_id = await prepared(recovery)
     verified = await service.verify(mission.id)
     assert verified.status == MissionStatus.VERIFIED_AWAITING_APPROVAL
+    events = await controller.db.get_events(mission.id)
+    assert [event.event_type for event in events if event.event_type in {"VERIFIER_STARTED", "VERIFICATION_PASSED"}] == [
+        "VERIFIER_STARTED", "VERIFICATION_PASSED"]
     assert all(c.status == CriterionStatus.PASS for c in await controller.db.get_criteria(mission.id))
     candidate = next(c for c in await controller.store.records(Candidate, mission.id) if c.id == candidate_id)
     request = ApprovalRequest(candidate_id=candidate_id, candidate_fingerprint=candidate.content_fingerprint, decision=ApprovalDecision.APPROVED)
@@ -63,6 +66,22 @@ async def test_verify_approve_apply_single_file_and_no_replay(recovery):
         await service.apply(mission.id, candidate_id)
     with pytest.raises(GuildConflict):
         await service.decide(mission.id, request)
+
+
+@pytest.mark.asyncio
+async def test_verifier_error_reports_failed_activity_without_claiming_a_verdict(recovery, monkeypatch):
+    controller, mission, _, service, _ = await prepared(recovery)
+
+    async def broken(*args):
+        raise ValueError("Unusable report")
+
+    monkeypatch.setattr(service, "_evaluate", broken)
+    with pytest.raises(ValueError, match="Unusable report"):
+        await service.verify(mission.id)
+    events = await controller.db.get_events(mission.id)
+    assert [event.event_type for event in events if event.event_type.startswith("VERIFIER_")] == [
+        "VERIFIER_STARTED", "VERIFIER_ERROR"]
+    assert (await controller.db.get_mission(mission.id)).status == MissionStatus.VERIFYING
 
 
 @pytest.mark.asyncio

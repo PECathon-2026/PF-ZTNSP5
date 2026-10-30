@@ -97,7 +97,7 @@ class RecoveryModel:
             else:
                 findings = [{"severity": "HIGH", "title": "Seeded review issue", "description": "Review the value contract",
                              "observed_behavior": "Wrong value", "expected_behavior": "Expected value", "file_path": "app.py",
-                             "evidence_ids": [context["evidence"][0]["id"]]}] if self.initial_review_fails and self.review_runs == 1 else []
+                             "evidence_ids": [context["evidence"][0]["id"]]}] if self.initial_review_fails and self.developer_runs == 1 else []
                 resolved = [] if self.ignore_prior_review else [f["id"] for f in context["prior_findings"]]
                 calls = [tool("submit_review", {"summary": "Reviewed", "findings": findings, "resolved_finding_ids": resolved}, "review-submit")]
         return httpx.Response(200, json={"content": calls, "stop_reason": "tool_use", "usage": {"input_tokens": 10, "output_tokens": 5}})
@@ -172,8 +172,8 @@ async def test_m5_seeded_failure_replans_repairs_and_retests(recovery):
     result = await run(recovery)
     assert result.status == MissionStatus.VERIFYING, result.failure_reason
     assert result.budgets.repair_rounds_used == 1
-    assert result.budgets.model_turns_used == sum(model.turns.values()) == 16
-    assert result.budgets.input_tokens_used == 160 and result.budgets.output_tokens_used == 80
+    assert result.budgets.model_turns_used == sum(model.turns.values()) == 18
+    assert result.budgets.input_tokens_used == 180 and result.budgets.output_tokens_used == 90
     assert len(executor.calls) == 3
     context = await controller.store.context(mission.id)
     assert context["plan_revision"] == 2 and len(context["plan_history"]) == 2

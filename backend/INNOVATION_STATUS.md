@@ -19,7 +19,8 @@ Another live synthetic mission `miss-9de5c0a8` reached the same gate, with three
 
 ## Explicit limitations / next decisions
 
-- Test-gap handling **fails closed**: when a real mission has an unmapped criterion, it persists a blocker and optional model-proposed expected behavior/test name *before authorization*. A human adds/reviews missing tests in the original repository and starts a new mission. Automatic test-code creation and acceptance into the same frozen mission are **not implemented**, to avoid letting the implementation agent write its own oracle.
+- Test gaps now pause **before source authorization**: Sentinel proposes bounded pytest files and explicit criterion mappings; a human reads the complete assertions and accepts the proposal hash separately from authorizing Samurai. Accepted tests execute in temporary baseline/candidate verification views and are bound to the verification contract. Declined, changed or unaccepted proposals cannot authorize edits. The developer never writes or changes these test files. Proposed test expectations can still be wrong; human review is essential.
+- Sentinel checks and Shadow Council's preliminary source review now start together on a frozen candidate. Material check findings or surviving challenge variants trigger a second evidence-informed review. The TUI reads persisted task states and may show both agents LIVE; it does not pretend the preliminary review saw unfinished checks.
 - The repository map supports small Python projects and common top-level/class pytest functions; dependency graph ranking and large-repository semantic indexing are not implemented.
 - The challenge uses a narrow bounded mutation set, not exhaustive `mutmut`. No mutmut package was installed. A surviving variant may be equivalent; reviewer/human judgment remains necessary.
 - A verifier passing mapped tests establishes that those tests ran; it cannot prove the test expectations fully express natural-language intent.

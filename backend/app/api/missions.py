@@ -5,6 +5,7 @@ from app.schemas.mission import (
     CreateMissionRequest,
     CriterionStatus,
     Mission,
+    MissionBudgets,
     MissionStatus,
 )
 from app.schemas.task import MissionTask
@@ -16,8 +17,10 @@ from app.schemas.guild import Clarification
 from app.schemas.approval import Approval
 from app.storage.guild import GuildStore, GuildConflict
 from app.storage.database import get_database
+from app.services.mission_credentials import set_mission_key, has_mission_key, forget_mission_key
+from app.api.credential_route import CredentialSafeRoute
 
-router = APIRouter(prefix="/api/missions", tags=["Missions"])
+router = APIRouter(prefix="/api/missions", tags=["Missions"], route_class=CredentialSafeRoute)
 
 
 class MissionDetailResponse(BaseModel):
@@ -32,6 +35,9 @@ class MissionDetailResponse(BaseModel):
     plan_revision: int = 0
     approvals: list[Approval] = Field(default_factory=list)
     repository_files: list[str] = Field(default_factory=list)
+    acceptance_test_proposal: dict | None = None
+    own_api_key: bool = False
+    api_key_ready: bool = False
 
 
 @router.post("", response_model=MissionDetailResponse, status_code=status.HTTP_201_CREATED)
@@ -43,6 +49,7 @@ async def create_mission(request: CreateMissionRequest) -> MissionDetailResponse
         repository_id=request.repository_id,
         request_text=request.request_text,
         status=MissionStatus.PLANNING,
+        budgets=MissionBudgets(**request.limits.model_dump()),
     )
 
     criteria_objects = [
@@ -54,7 +61,22 @@ async def create_mission(request: CreateMissionRequest) -> MissionDetailResponse
         for crit_text in request.criteria
     ]
 
-    await db.create_mission(mission, criteria_objects)
+    if request.api_key is not None:
+        try:
+            set_mission_key(mission.id, request.api_key.get_secret_value(), request.base_url)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
+    elif request.base_url is not None:
+        raise HTTPException(status_code=422, detail="A custom base URL requires a mission API key.")
+
+    try:
+        await db.create_mission(mission, criteria_objects)
+        if request.api_key is not None:
+            async with GuildStore(db).transaction() as connection:
+                await connection.execute("INSERT INTO guild_context VALUES (?,?)", (mission.id, '{"own_api_key":true}'))
+    except Exception:
+        forget_mission_key(mission.id)
+        raise
 
     # Emit creation event
     await db.emit_event(
@@ -65,6 +87,7 @@ async def create_mission(request: CreateMissionRequest) -> MissionDetailResponse
             "title": "Mission initialized",
             "request": mission.request_text,
             "criteria_count": len(criteria_objects),
+            "limits": request.limits.model_dump(),
         },
     )
 
@@ -72,6 +95,8 @@ async def create_mission(request: CreateMissionRequest) -> MissionDetailResponse
         mission=mission,
         criteria=criteria_objects,
         tasks=[],
+        own_api_key=request.api_key is not None,
+        api_key_ready=has_mission_key(mission.id),
     )
 
 
@@ -110,6 +135,9 @@ async def get_mission(mission_id: str) -> MissionDetailResponse:
         plan_revision=context.get("plan_revision", 0),
         approvals=await store.records(Approval, mission_id),
         repository_files=context.get("repository", {}).get("included_files", []),
+        acceptance_test_proposal=context.get("acceptance_tests"),
+        own_api_key=context.get("own_api_key", False),
+        api_key_ready=has_mission_key(mission_id),
     )
 
 

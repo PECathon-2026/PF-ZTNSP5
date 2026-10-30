@@ -9,6 +9,8 @@ from app.api.missions import router as missions_router
 from app.api.repositories import router as repositories_router
 from app.api.guild import router as guild_router
 from app.api.events import router as events_router
+from app.api.history import router as history_router
+from app.api.recovery import router as recovery_router
 from app.settings import get_settings
 from app.storage.database import get_database
 
@@ -56,6 +58,8 @@ app.include_router(missions_router)
 app.include_router(repositories_router)
 app.include_router(guild_router)
 app.include_router(events_router)
+app.include_router(history_router)
+app.include_router(recovery_router)
 
 # Mount frontend static files if directory exists
 frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"

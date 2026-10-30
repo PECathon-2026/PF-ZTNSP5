@@ -30,6 +30,27 @@ class TestGapProposal(ToolArguments):
     rationale: str = Field(min_length=1, max_length=1000)
 
 
+class AcceptanceTestFile(ToolArguments):
+    path: str = Field(pattern=r"^test_kage_[a-zA-Z0-9_]+\.py$", max_length=120)
+    content: str = Field(min_length=1, max_length=20000)
+
+
+class AcceptanceTestMapping(ToolArguments):
+    criterion_description: str = Field(min_length=1, max_length=2000)
+    test_selectors: list[str] = Field(min_length=1, max_length=10)
+
+
+class AcceptanceTestProposal(ToolArguments):
+    summary: str = Field(min_length=1, max_length=2000)
+    files: list[AcceptanceTestFile] = Field(min_length=1, max_length=3)
+    mappings: list[AcceptanceTestMapping] = Field(min_length=1, max_length=20)
+
+
+class AcceptanceTestDecision(ToolArguments):
+    proposal_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    accept: bool
+
+
 class GuildPlan(ToolArguments):
     summary: str = Field(min_length=1, max_length=2000)
     criteria: list[PlannedCriterion] = Field(min_length=1, max_length=20)

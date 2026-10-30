@@ -101,7 +101,10 @@ class GuildStore:
             if phase == "execute":
                 context_row = await (await connection.execute("SELECT context_json FROM guild_context WHERE mission_id=?", (mission_id,))).fetchone()
                 context = json.loads(context_row[0]) if context_row else {}
+                from app.services.acceptance_tests import checked_bundle
+                checked_bundle(context)
                 context["auto_repair"] = auto_repair
+                context["execution_authorized"] = True
                 await connection.execute("UPDATE guild_context SET context_json=? WHERE mission_id=?", (json.dumps(context), mission_id))
             try:
                 await connection.execute("INSERT INTO guild_operations VALUES (?,?,?)", (mission_id, token, phase))
@@ -207,7 +210,7 @@ class GuildStore:
             await self._event(connection, mission_id, "CLARIFICATION_ANSWERED", candidate_id)
         return token, phase
 
-    async def _event(self, connection, mission_id, event, candidate_id=None):
+    async def _event(self, connection, mission_id, event, candidate_id=None, payload=None):
         sequence = (await (await connection.execute(
             "SELECT COALESCE(MAX(sequence),0)+1 FROM events WHERE mission_id=?", (mission_id,),
         )).fetchone())[0]
@@ -217,7 +220,7 @@ class GuildStore:
         await connection.execute(
             "INSERT INTO events VALUES (?,?,?,?,?,?,?,?,?)",
             (sequence, mission_id, event, "CONTROLLER", None, candidate_id or state["active_candidate_id"],
-             "[]", json.dumps({"status": state["status"]}), now()),
+             "[]", redact_secrets(json.dumps({"status": state["status"], **(payload or {})})), now()),
         )
 
     async def release(self, mission_id, token):

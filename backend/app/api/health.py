@@ -1,11 +1,32 @@
 import shutil
 import subprocess
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, SecretStr, Field
+from app.agents.model_adapter import ModelAdapterError
+from app.api.credential_route import CredentialSafeRoute
+from app.services.mission_credentials import check_model_connection
 from app.schemas.common import HealthResponse
 from app.settings import get_settings
 from app.storage.database import get_database
 
-router = APIRouter(tags=["Health"])
+router = APIRouter(tags=["Health"], route_class=CredentialSafeRoute)
+
+
+class CheckModelCredentials(BaseModel):
+    api_key: SecretStr = Field(repr=False, exclude=True)
+    base_url: str | None = Field(default=None, max_length=2048, repr=False, exclude=True)
+
+
+@router.post("/api/model-config/validate")
+async def validate_model_config(request: CheckModelCredentials):
+    """Make one small model request to verify key, endpoint and provider protocol."""
+    try:
+        settings = await check_model_connection(request.api_key.get_secret_value(), request.base_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except ModelAdapterError:
+        raise HTTPException(status_code=400, detail="Provider did not accept the API key, model or base URL; check its configuration.") from None
+    return {"valid": True, "provider": settings.model_provider, "model": settings.configured_model_name}
 
 
 def check_docker_available() -> bool:
@@ -23,6 +44,13 @@ def check_docker_available() -> bool:
         return result.returncode == 0
     except Exception:
         return False
+
+
+@router.get("/api/model-config")
+async def get_model_config():
+    settings = get_settings()
+    return {"provider": settings.model_provider, "model": settings.configured_model_name,
+            "endpoint_configured": bool(settings.model_base_url and settings.configured_model_name)}
 
 
 @router.get("/api/health", response_model=HealthResponse)

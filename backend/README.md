@@ -1,6 +1,71 @@
 # DevPilot backend
 
+Same-mission checkpoint continuation and explicit budget extensions are documented
+in [RECOVERY.md](RECOVERY.md). Older notes about starting a new mission after every
+interruption describe the previous behavior; recovery now supports validated
+checkpoints without replaying interrupted tool calls.
+
 ## Interactive CLI (no frontend server required)
+
+In Windows Terminal or another interactive terminal, launch the boxed KAGE UI:
+
+```powershell
+python -m pip install -r requirements.txt
+python -m app.cli
+```
+
+The command prompts for your repository and request. Press Enter when asked for
+success conditions to let Shogun propose them. `/manual` opts into your own
+criteria; `/help`, `/clear`, `/auto` and `/done` are available. Manual entries
+become binding only after you type `KEEP`. Normal conversational input is not a
+CLI command. The gold/ink KAGE dashboard has an activity pane, active-agent
+sidebar, recent handoffs, mission status and real budget counters. Shogun's plan and Shadow
+Council's review summaries come from their recorded structured responses;
+tool execution results remain separately labeled. The original code and
+final approval/apply rules remain separate from authorization.
+
+Use a terminal at least **96 columns wide** for the right sidebar. At narrower
+widths the activity pane expands and the current agent remains in the footer.
+The dashboard stays open while you type: the prompt is anchored at the bottom.
+Plans, proposed test assertions and candidate diffs appear in a reviewable pane;
+PageUp/PageDown scroll, F6/F7 switch between reviews and F8 returns to live
+activity. When Shogun asks for clarification, its complete question appears in
+that same pane above the reply field. These keys do not submit or change the typed answer. The activity
+pane shows the newest wrapped lines; the complete event history remains in
+SQLite and is available via `watch` or `proof`.
+Opening a saved mission with `resume` replays its recorded activity. If that
+mission is already stopped or has no input to collect, the dashboard shows
+an on-screen action menu: type `1` for activity, `2` for the latest review or
+summary, `3`/`4` to scroll forward/back when there is only one saved review
+(or switch reviews when there are several), `5` to reopen the menu, `6` to
+review a follow-up, or `/up` and `/down` to scroll; press Enter to close. The pane title shows the
+actual saved-review count and page position. F-keys are optional
+shortcuts. Saved tasks and check mappings appear as a read-only plan when
+available. An interrupted mission identifies unfinished disposable edits and
+offers a fresh follow-up instead of replaying an uncertain write. Opening
+the saved view alone does not restart work or change the mission.
+
+To continue an old conversation, use `python -m app.cli continue <old-mission-id>`
+or type `6` in its saved-mission menu. Review the original repository path,
+request, answered user clarifications and success conditions; optionally add
+a new instruction. Only typing `CREATE FOLLOW-UP` creates a **new** mission,
+replans against the current original repository and stops for fresh test review
+and source authorization. Declining creates nothing. The old mission's history
+is retained; unfinished edits, check results, budget and approval are not reused.
+If you type more natural-language detail at the confirmation prompt, it is
+added to the preview rather than closing the CLI. Use `/edit` to add another
+instruction, `/clear` to clear additions, or `/cancel` to return to the saved
+mission menu. Repeat `CREATE FOLLOW-UP` only when the preview is right.
+
+```powershell
+python -m app.cli watch miss-... --follow
+python -m app.cli --plain run   # original scrolling log; --plain precedes the command
+```
+
+Piped/redirected input or output uses plain mode automatically, and `list`/`proof`
+keep readable, exportable output. Rich supplies the layout and prompt_toolkit
+coordinates the persistent screen and keyboard input. The split-layout design
+takes inspiration from OpenCode. This UI does not run or require OpenCode.
 
 From `backend/`, after configuring `backend/.env` and building the restricted
 check image, run a mission against an **existing small Python repository**:
@@ -13,14 +78,26 @@ Missing flags are prompted for interactively. The CLI displays real, replayable
 Shogun/Samurai/Sentinel/Shadow Council activity, check outcomes and findings.
 Review its proposed tasks and criterion-to-test mappings; **type `AUTHORIZE`**
 to let agents change only the disposable workspace. It then runs independent
-verification, displays the exact candidate diff/fingerprint and **stops before
-human approval**. Use bounded `--max-model-turns 60 --max-tool-calls 100` for
-larger small-repository demonstrations; the normal defaults are 25/50.
+verification and displays the exact candidate diff/fingerprint. In an interactive
+terminal, type `SAVE` if you want the verified change in your existing repo:
+the CLI then requires the exact candidate fingerprint for approval and a separate
+`APPLY <fingerprint>` to write the original files. Enter leaves them untouched;
+`approve <mission_id>` lets you save later. CLI defaults are 60 model turns / 100 tool calls; both remain
+bounded. API-created missions still use the configured mission defaults.
+
+If requested behavior lacks existing test coverage, Sentinel may propose
+`test_kage_*.py` acceptance tests. Read their complete code and criterion
+mappings before typing `ACCEPT TESTS <proposal-hash>`. This is separate from
+`AUTHORIZE` for source edits. Approved test code runs in temporary verification
+copies; neither source workspace nor original tests are modified. Declining
+or pausing leaves source edits unauthorized. A paused review resumes via
+`python -m app.cli resume <mission_id>`.
 
 ```powershell
 python -m app.cli list
 python -m app.cli watch miss-... --after 0  # replay committed events; --follow watches an active mission
 python -m app.cli resume miss-...           # plan authorization or clarification after a pause
+python -m app.cli continue miss-...         # review a fresh follow-up to an interrupted mission
 python -m app.cli proof miss-... --format markdown
 python -m app.cli approve miss-...          # review diff, type full SHA-256, then separately type APPLY SHA-256
 ```
@@ -33,6 +110,12 @@ at a time; don't run an active API mission and CLI mission on the same database
 concurrently. Container checks never fall back to host execution. An interrupted
 in-process write remains interrupted; use a fresh mission rather than blindly
 replaying tool calls.
+
+The browser UI offers **Review and save changes** after verification; approve
+the exact candidate and click **Save approved changes to existing repository**
+in the review panel. The status becomes `APPLIED` after the existing files are
+updated. A mission stopped at `INTERRUPTED`, `BLOCKED` or failed verification has
+no trusted patch to save; make a fresh follow-up and finish verification first.
 
 ## Run
 
@@ -183,8 +266,9 @@ single-process scheduler; do not start multiple workers against the same databas
    This returns **202** and selects the M4 routing-only demonstration.
 5. Samurai executes ready tasks in dependency order under a writer lease, freezing
    each handoff. Sentinel and Shadow Council then inspect the final frozen candidate
-   concurrently. The reviewer receives the diff and any candidate evidence already
-   available when it starts; it never assumes that concurrent checks passed.
+   concurrently on the frozen candidate. Source review is preliminary while
+   checks run; material test/security/challenge findings trigger a second,
+   evidence-informed review before routing. Neither agent writes the candidate.
 6. Poll mission details for tasks, candidates, evidence, findings and messages.
 
 The authorization is permission for disposable-workspace work, not approval to
@@ -431,7 +515,8 @@ source/test discovery. The controller challenges eligible changed functions
 with up to three isolated AST variants after checks pass; detection/survival is
 recorded separately from code failure. `GET /api/missions/{id}/proof` exports
 a bounded JSON/Markdown proof card, including causal finding-to-task links.
-Without accepted tests a real mission blocks **before authorization** and
-proposes a test gap for human review; automatically writing new test assertions
-into the same mission is not implemented. See [INNOVATION_STATUS.md](INNOVATION_STATUS.md)
+Without accepted tests Sentinel proposes separate acceptance test code for
+human review **before authorization**. Accepted code runs only in disposable
+verification views with contract-bound hashes; the developer cannot alter
+it or weaken repository tests. See [INNOVATION_STATUS.md](INNOVATION_STATUS.md)
 for current live evidence, limitations and attribution.
